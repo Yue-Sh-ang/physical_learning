@@ -1,5 +1,5 @@
 import numpy as np
-from povray import Scene
+#from povray import Scene
 from plot_imports import *
 from elastic_utils import Elastic
 
