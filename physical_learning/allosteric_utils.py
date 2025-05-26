@@ -1735,6 +1735,7 @@ class Allosteric(Elastic):
 		ax1.axhline(es0, color=pal['blue'], lw=1.5, label='training strain')
 		for source in self.sources:
 			es = self.strain(source)
+			print(self.t_eval.shape,es.shape)
 			ax1.scatter(self.t_eval, es, color=add_alpha(pal['blue'],0.7), s=2)
 			es_max = np.max(np.abs(es))
 			if es_max > emax:
@@ -2518,7 +2519,13 @@ class Allosteric(Elastic):
 			f.write('#SBATCH --job-name="{:s}"\n'.format(jobname))
 			f.write('#SBATCH --mail-type=FAIL\n')
 			f.write('#SBATCH --mail-user=yueshang@sas.upenn.edu\n')
-			f.write('#SBATCH --partition=liu_compute\n')
+			f.write('#SBATCH --partition=low\n')
+			f.write('#SBATCH --qos=low\n')
+			f.write('#SBATCH --nodes=1\n')
+			f.write('#SBATCH --ntasks-per-node=1\n')
+			f.write('#SBATCH --cpus-per-task=1\n')
+			f.write('#SBATCH --nodelist=node02,node11,node12,node13,node15,node19,node20\n')
+			f.write('#SBATCH --output="{:s}.out"\n'.format(jobname))
 			f.write('#SBATCH --time="{:d}:00:00"\n\n'.format(hours))
 			f.write('srun -n 1 {:s}\n'.format(cmd))
 
