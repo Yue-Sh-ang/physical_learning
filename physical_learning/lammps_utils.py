@@ -196,9 +196,11 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 	cmd = lmp_path+' -i '+infile+' -log '+logfile
 
 	allo.write_job(odir+jobfile, prefix+'_test', hours, cmd)
-	print("Simulation files written to: {:s}".format(odir))
-	print("Navigate to directory and run: {:s}".format(cmd))
-	print("Or, navigate to directory and submit the job to the queue: sbatch job.sh")
+	# submit job togeterh
+	with open('tasks.sh', 'a') as f:
+		f.write(f"sbatch {odir+jobfile}\n")
+	
+	print("LAMMPS simulation set up in directory: {:s}".format(odir))
 
 def load_run(odir):
 	'''Load a complete LAMMPS simulation from its directory.
