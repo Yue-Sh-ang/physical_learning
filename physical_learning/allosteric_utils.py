@@ -2523,8 +2523,8 @@ class Allosteric(Elastic):
 			f.write('#SBATCH --ntasks-per-node=1\n')
 			f.write('#SBATCH --cpus-per-task=1\n')
 			f.write('#SBATCH --nodelist=node02,node11,node12,node13,node15,node19,node20\n')
-			f.write('#SBATCH --output=/home/yueshang/messages/slurm-%j.out')
-			f.write('#SBATCH --error=/home/yueshang/messages/slurm-%j.err')
+			f.write('#SBATCH --output=/home/yueshang/messages/slurm-%j.out\n')
+			f.write('#SBATCH --error=/home/yueshang/messages/slurm-%j.err\n')
 			f.write('#SBATCH --time="{:d}:00:00"\n\n'.format(hours))
 			f.write('srun -n 1 {:s}\n'.format(cmd))
 
