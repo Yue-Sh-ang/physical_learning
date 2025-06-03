@@ -198,7 +198,8 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 	allo.write_job(odir+jobfile, prefix+'_test', hours, cmd)
 	# submit job togeterh
 	with open('tasks.sh', 'a') as f:
-		f.write(f"sbatch {odir+jobfile}\n")
+		f.write(f"cd {odir}\n")
+		f.write(f"sbatch ./{jobfile}\n")
 	
 	print("LAMMPS simulation set up in directory: {:s}".format(odir))
 
