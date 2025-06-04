@@ -179,6 +179,24 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
       if (k[type] < vmin[type]) k[type] = vmin[type];
 
     }
+    if (train[type] == 1) { // update rest length
+      double lsmooth = vmin[type]*2;
+      double s=(r0[type]-vmin[type])/(lsmooth-vmin[type]); //I need add lmin and lsmooth similar as vmin
+			if (s < 0){s = 0;}
+			if (s > 1){s = 1;}
+			double sf = s*s*s*(s*(s*6-15)+10);
+
+      if (mode[type] == 1) { // directed aging
+        dl = -alpha[type]/eta[type]* k[type]*(r0[type]-r_c)*sf;
+        r0[type] += dl;
+      }
+
+      else { // coupled learning
+        dl = -alpha[type]/eta[type] * k[type]*(r_f-r_c)*sf;
+        r0[type] += dl;
+      }
+
+    }
   }
 }
 
