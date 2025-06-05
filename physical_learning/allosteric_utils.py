@@ -2517,15 +2517,13 @@ class Allosteric(Elastic):
 		with open(filename, 'w') as f:
 			f.write('#!/bin/bash\n')
 			f.write('#SBATCH --job-name="{:s}"\n'.format(jobname))
-			f.write('#SBATCH --partition=low\n')
-			f.write('#SBATCH --qos=low\n')
+			f.write('#SBATCH --partition=testing\n')
+			f.write('#SBATCH --qos=testing\n')
 			f.write('#SBATCH --nodes=1\n')
 			f.write('#SBATCH --ntasks-per-node=1\n')
 			f.write('#SBATCH --cpus-per-task=1\n')
-			f.write('#SBATCH --nodelist=node02,node11,node12,node13,node15,node19,node20\n')
-			#f.write('#SBATCH --output=/home/yueshang/messages/slurm-%j.out\n')
-			#f.write('#SBATCH --error=/home/yueshang/messages/slurm-%j.err\n')
 			f.write('#SBATCH --time="{:d}:00:00"\n\n'.format(hours))
-			f.write('srun -n 1 {:s}\n'.format(cmd))
+			f.write('module load openmpi/4.1.7 \n')
+			f.write('{:s}\n'.format(cmd))
 
 
