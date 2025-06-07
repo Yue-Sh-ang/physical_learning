@@ -1158,7 +1158,8 @@ class Allosteric(Elastic):
 		fig.tight_layout()
 		if filename:
 			fig.savefig(filename, bbox_inches='tight')
-		plt.show()
+		#plt.show()
+		return fig
 
 	def _plot_3d(self, spine=False, contour=False, outline=False, figsize=(5,5), filename=None):
 		'''Plot a 3D network.'''
@@ -1218,6 +1219,7 @@ class Allosteric(Elastic):
 		if filename:
 			fig.savefig(filename, bbox_inches='tight')
 		plt.show()
+
 
 	def _get_path(self):
 		nodes = []
