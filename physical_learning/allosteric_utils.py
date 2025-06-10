@@ -1511,7 +1511,7 @@ class Allosteric(Elastic):
 		plt.close(fig)
 		return ani
 
-	def color_plot(self, cmap, vmin, vmax, spine=False, contour=False, figsize=(5,5), filename=None):
+	def color_plot(self, cmap, vmin, vmax, spine=False,ax=None, contour=False, figsize=(5,5), filename=None):
 		'''Plot the network with edges colored according to the bond stiffness.
 		
 		Parameters
@@ -1534,21 +1534,29 @@ class Allosteric(Elastic):
 			The name of the file for saving the plot.
 		'''
 
-		if self.dim == 2: self._color_plot_2d(cmap, vmin, vmax, figsize, filename)
-		else: self._color_plot_3d(cmap, vmin, vmax, spine, contour, figsize, filename)
+		if self.dim == 2: self._color_plot_2d(cmap, vmin, vmax, figsize, filename,ax=ax)
+		else: self._color_plot_3d(cmap, vmin, vmax, spine, contour, figsize, filename,ax=ax)
 
-	def _color_plot_2d(self, cmap, vmin, vmax, figsize=(5,5), filename=None):
-		'''Plot a 2D network.'''
 
-		fig, ax = plt.subplots(1,1,figsize=figsize)
+	def _color_plot_2d(self, cmap, vmin, vmax, figsize=(5, 5), filename=None, ax=None):
+		'''Plot a 2D network on a given axis, or create a new figure.'''
+		# 1. Check if an axis was provided. If not, create a new figure and axis.
+		if ax is None:
+			fig, ax = plt.subplots(1, 1, figsize=figsize)
+			# We will handle layout, saving, and showing only in this case.
+			is_standalone = True
+		else:
+			fig = ax.get_figure()
+			is_standalone = False
+
+		# ---plotting logic---
 		norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
-
 		edgecolors = np.zeros((self.ne, 4))
-		for i,edge in enumerate(self.graph.edges(data=True)):
+		for i, edge in enumerate(self.graph.edges(data=True)):
 			edgecolors[i] = cmap(norm(edge[2]['stiffness']))
 
 		e = self._collect_edges()
-		ec = mc.LineCollection(e[:,:,:self.dim], colors=edgecolors, linewidths=3)
+		ec = mc.LineCollection(e[:, :, :self.dim], colors=edgecolors, linewidths=3)
 		ax.add_collection(ec)
 
 		for source in self.sources:
@@ -1557,12 +1565,18 @@ class Allosteric(Elastic):
 			t = self.plot_target(ax, target)
 
 		self.set_axes(ax)
-		fig.tight_layout()
-		if filename:
-			fig.savefig(filename, bbox_inches='tight')
-		plt.show()
 
-	def _color_plot_3d(self, cmap, vmin, vmax, spine=False, contour=False, figsize=(5,5), filename=None):
+		# 2. perform figure-level operations
+		if is_standalone:
+			fig.tight_layout()
+			if filename:
+				fig.savefig(filename, bbox_inches='tight')
+			plt.show()
+
+		# 3. Return the axis so it can be used by the calling code.
+		return ax
+
+	def _color_plot_3d(self, cmap, vmin, vmax, spine=False, contour=False, figsize=(5,5), filename=None,ax=None):
 		'''Plot a 3D network.'''
 
 		fig, ax = plt.subplots(1,1,figsize=figsize)
