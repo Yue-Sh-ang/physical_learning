@@ -2178,8 +2178,9 @@ class Allosteric(Elastic):
 		plt.show()
 
 
-	def distribution_plot(self, kind='stiffness', vmin=0, vmax=2, nbins=25, figsize=(2.5,2), filename=None):
-		'''Make a distribution plot of either bond stiffnesses or rest lengths.
+	
+	def distribution_plot(self, kind='stiffness', vmin=0, vmax=2, nbins=25, figsize=(2.5, 2), filename=None, ax=None):
+		'''Make a distribution plot on a given axis, or create a new figure.
 
 		Parameters
 		----------
@@ -2192,37 +2193,52 @@ class Allosteric(Elastic):
 		nbins : int, optional
 			The number of evenly-spaced bins to use.
 		figsize : tuple, optional
-			The figure size.
+			The figure size, used only if `ax` is not provided.
 		filename : str, optional
-			The name of the file for saving the plot.
+			The name of the file for saving the plot, used only if `ax` is not provided.
+		ax : matplotlib.axes.Axes, optional
+			The axis on which to draw the plot. If None, a new figure and axis are created.
 
 		Returns
 		-------
-		ndarray
+		v : ndarray
 			Array of values whose distribution is plotted.
+		ax : matplotlib.axes.Axes
+			The axis on which the plot was drawn.
 		'''
-
-		if kind not in ['stiffness','length']:
+		if kind not in ['stiffness', 'length']:
 			raise ValueError("'kind' must be 'stiffness' or 'length'.")
 
+		# 1. Check if an axis was provided. If not, create one.
+		if ax is None:
+			fig, ax = plt.subplots(1, 1, figsize=figsize)
+			is_standalone = True
+		else:
+			fig = ax.get_figure()
+			is_standalone = False
+
+		# --- Data extraction and histogram calculation  ---
 		v = np.zeros(self.ne)
-		for e,edge in enumerate(self.graph.edges(data=True)):
+		for e, edge in enumerate(self.graph.edges(data=True)):
 			v[e] = edge[2][kind]
-		
+
 		bins = np.linspace(vmin, vmax, nbins)
-		x = 0.5*(bins[1:]+bins[:-1])
+		x = 0.5 * (bins[1:] + bins[:-1])
 		y = np.histogram(v, bins)[0]
 
-		fig, ax = plt.subplots(1,1,figsize=figsize)
-		ax.bar(x, y, width=0.8*np.diff(bins), color=pal['blue'])
+		ax.bar(x, y, width=0.8 * np.diff(bins), color=pal['blue'])
 		ax.set_xlabel(kind)
 		ax.set_ylabel('count')
-		fig.tight_layout()
-		if filename:
-			fig.savefig(filename, bbox_inches='tight')
-		plt.show()
 
-		return v
+		# 3. Only manage the figure if this function created it
+		if is_standalone:
+			fig.tight_layout()
+			if filename:
+				fig.savefig(filename, bbox_inches='tight')
+			plt.show()
+
+		# 4. Return the data and the axis for further use
+		return v, ax
 
 	'''
 	*****************************************************************************************************
