@@ -1922,8 +1922,8 @@ class Elastic(object):
 		assert dim in [2, 3], "dim must be 2 or 3"
 
 		t = 0
-		dof = dim * self.n
-		hess = np.zeros((dof, dof))
+		
+		hess = np.zeros((3*self.n, 3*self.n))
 		
 		# Create full 3D q vector (even if system is 2D)
 		if dim == 2:
