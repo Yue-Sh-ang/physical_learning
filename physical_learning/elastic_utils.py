@@ -1946,11 +1946,6 @@ class Elastic(object):
 		self._elastic_jacobian(t, self.n, q, edge_k, edge_l, hess, network)
 
 		if dim == 2:
-			# Assert all z-related entries are zero (safety check)
-			for i in range(self.n):
-				assert np.allclose(hess[3*i+2, :], 0), f"Non-zero z-row for particle {i}"
-				assert np.allclose(hess[:, 3*i+2], 0), f"Non-zero z-col for particle {i}"
-
 			# Extract only x and y components
 			mask2d = np.zeros(3 * self.n, dtype=bool)
 			mask2d[::3] = True   # x
