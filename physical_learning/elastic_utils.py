@@ -1902,8 +1902,14 @@ class Elastic(object):
 	*****************************************************************************************************
 	'''
 
-	def compute_modes(self):
-		'''Compute the normal modes of the elastic network at equilibrium.
+	def compute_modes(self, dim=3):
+		'''
+		Compute the normal modes of the elastic network at equilibrium.
+
+		Parameters
+		----------
+		dim : int
+			Dimensionality of the system (2 or 3).
 
 		Returns
 		-------
@@ -1913,24 +1919,52 @@ class Elastic(object):
 			Unit eigenvectors stored in each column.
 		'''
 
+		assert dim in [2, 3], "dim must be 2 or 3"
+
 		t = 0
-		hess = np.zeros((3*self.n,3*self.n))
-		q = np.hstack([self.pts.ravel(),np.zeros(3*self.n)])
-		mask = np.zeros(3*self.n, dtype=bool)
-		mask[::3] = self.degree > 0
-		mask[1::3] = self.degree > 0
-		mask[2::3] = self.degree > 0
+		dof = dim * self.n
+		hess = np.zeros((dof, dof))
+		
+		# Create full 3D q vector (even if system is 2D)
+		if dim == 2:
+			q = np.zeros(3 * self.n)
+			q[::3] = self.pts[:, 0]
+			q[1::3] = self.pts[:, 1]
+		else:
+			q = np.hstack([self.pts.ravel(), np.zeros(3 * self.n - self.pts.size)])
+
+		# Define mask: active degrees of freedom based on degree
+		mask = np.zeros(3 * self.n, dtype=bool)
+		mask[::3] = self.degree > 0  # x
+		mask[1::3] = self.degree > 0  # y
+		mask[2::3] = self.degree > 0  # z
 
 		edge_i, edge_j, edge_k, edge_l, edge_t = self._edge_lists()
 		network = (edge_i, edge_j, edge_k, edge_l, edge_t)
 
+		# Use 3D Jacobian function (but input will be 2D if dim=2)
 		self._elastic_jacobian(t, self.n, q, edge_k, edge_l, hess, network)
-		
-		hess = hess[mask]
-		hess = hess.T[mask].T
 
+		if dim == 2:
+			# Assert all z-related entries are zero (safety check)
+			for i in range(self.n):
+				assert np.allclose(hess[3*i+2, :], 0), f"Non-zero z-row for particle {i}"
+				assert np.allclose(hess[:, 3*i+2], 0), f"Non-zero z-col for particle {i}"
+
+			# Extract only x and y components
+			mask2d = np.zeros(3 * self.n, dtype=bool)
+			mask2d[::3] = True   # x
+			mask2d[1::3] = True  # y
+
+			mask = mask & mask2d  # Keep only x and y of active nodes
+
+		# Apply final mask
+		hess = hess[mask][:, mask]
+
+		# Compute eigenvalues and eigenvectors
 		evals, evecs = np.linalg.eigh(-hess)
 		return evals, evecs
+
 
 	def rigid_correction(self):
 		'''Find the nearest Procrustes transformation (translation + rotation) to the first frame.
