@@ -1170,67 +1170,67 @@ class Allosteric(Elastic):
 			plt.show()
 		return ax
 
-def _plot_3d(self, spine=False, contour=False, outline=False, figsize=(5, 5), filename=None, ax=None):
-	'''Plot a 3D network on a given axis.'''
+	def _plot_3d(self, spine=False, contour=False, outline=False, figsize=(5, 5), filename=None, ax=None):
+		'''Plot a 3D network on a given axis.'''
 
-	# 1. Check if an axis was provided. The logic is identical to _plot_2d.
-	if ax is None:
-		fig, ax = plt.subplots(1, 1, figsize=figsize)
-		is_standalone = True
-	else:
-		fig = ax.get_figure()
-		is_standalone = False
+		# 1. Check if an axis was provided. The logic is identical to _plot_2d.
+		if ax is None:
+			fig, ax = plt.subplots(1, 1, figsize=figsize)
+			is_standalone = True
+		else:
+			fig = ax.get_figure()
+			is_standalone = False
 
-	width = int(100 * figsize[0])
-	height = int(100 * figsize[1])
+		width = int(100 * figsize[0])
+		height = int(100 * figsize[1])
 
-	# --- All your POV-Ray rendering logic to generate `mat` remains the same ---
-	bg, lights, camera = self._povray_setup()
-	if spine:
-		nodes, pairs = self._get_path()
-		spheres = self._povray_spheres(nodes)
-		edges = self._povray_edges(pairs)
-	else:
-		spheres, edges = self.plot_network(ax)
-	if contour:
-		hull = [self._povray_hull()]
-	else:
-		hull = []
-	objects = [bg] + lights + spheres + edges + hull
-	sites = []
-	for source in self.sources:
-		sites += self.plot_source(ax, source)
-	for target in self.targets:
-		sites += self.plot_target(ax, target)
-	objects += sites
-	scene = Scene(camera, objects=objects, included=["colors.inc", "textures.inc"])
-	mat = scene.render(width=width, height=height, antialiasing=0.01)
-	if outline:
-		focus = Scene(camera, objects=[bg] + lights + sites, included=["colors.inc", "textures.inc"])
-		mat_f = focus.render(width=width, height=height, antialiasing=0.01)
-		no_shadow = scene.render(width=width, height=height, antialiasing=0.0001, quality=1)
-		no_shadow_f = focus.render(width=width, height=height, antialiasing=0.0001, quality=1)
-		filt = np.array([filters.roberts(1.0 * no_shadow[:, :, i]) for i in [0, 1, 2]])
-		out = np.dstack(3 * [255 * (filt.max(axis=0) == 0)])
-		out = np.maximum(out, 120)
-		filt = np.array([filters.roberts(1.0 * no_shadow_f[:, :, i]) for i in [0, 1, 2]])
-		out_f = np.dstack(3 * [255 * (filt.max(axis=0) == 0)])
-		out_f = np.maximum(out_f, 72)
-		mat = np.minimum(np.minimum((0.75 * mat + 0.25 * mat_f).astype(int), out), out_f)
-	# --- End of rendering logic ---
+		# --- All your POV-Ray rendering logic to generate `mat` remains the same ---
+		bg, lights, camera = self._povray_setup()
+		if spine:
+			nodes, pairs = self._get_path()
+			spheres = self._povray_spheres(nodes)
+			edges = self._povray_edges(pairs)
+		else:
+			spheres, edges = self.plot_network(ax)
+		if contour:
+			hull = [self._povray_hull()]
+		else:
+			hull = []
+		objects = [bg] + lights + spheres + edges + hull
+		sites = []
+		for source in self.sources:
+			sites += self.plot_source(ax, source)
+		for target in self.targets:
+			sites += self.plot_target(ax, target)
+		objects += sites
+		scene = Scene(camera, objects=objects, included=["colors.inc", "textures.inc"])
+		mat = scene.render(width=width, height=height, antialiasing=0.01)
+		if outline:
+			focus = Scene(camera, objects=[bg] + lights + sites, included=["colors.inc", "textures.inc"])
+			mat_f = focus.render(width=width, height=height, antialiasing=0.01)
+			no_shadow = scene.render(width=width, height=height, antialiasing=0.0001, quality=1)
+			no_shadow_f = focus.render(width=width, height=height, antialiasing=0.0001, quality=1)
+			filt = np.array([filters.roberts(1.0 * no_shadow[:, :, i]) for i in [0, 1, 2]])
+			out = np.dstack(3 * [255 * (filt.max(axis=0) == 0)])
+			out = np.maximum(out, 120)
+			filt = np.array([filters.roberts(1.0 * no_shadow_f[:, :, i]) for i in [0, 1, 2]])
+			out_f = np.dstack(3 * [255 * (filt.max(axis=0) == 0)])
+			out_f = np.maximum(out_f, 72)
+			mat = np.minimum(np.minimum((0.75 * mat + 0.25 * mat_f).astype(int), out), out_f)
+		# --- End of rendering logic ---
 
-	# The final image is shown on the target axis
-	ax.imshow(mat)
-	ax.axis('off')
+		# The final image is shown on the target axis
+		ax.imshow(mat)
+		ax.axis('off')
 
-	# 2. Only perform figure-level operations if this function created the figure.
-	if is_standalone:
-		fig.tight_layout()
-		if filename:
-			fig.savefig(filename, bbox_inches='tight')
-		plt.show()
+		# 2. Only perform figure-level operations if this function created the figure.
+		if is_standalone:
+			fig.tight_layout()
+			if filename:
+				fig.savefig(filename, bbox_inches='tight')
+			plt.show()
 
-	return ax
+		return ax
 
 	def _get_path(self):
 		nodes = []
@@ -1802,7 +1802,7 @@ def _plot_3d(self, spine=False, contour=False, outline=False, figsize=(5, 5), fi
 			if filename:
 				fig.savefig(filename, bbox_inches='tight', dpi=300)
 			plt.show()
-
+			
 	def mode_plot(self, v, scale, arrows=True, disks=False, figsize=(5,5), filename=None):
 		'''Plot a deformation mode (displacement) of the network.
 		
