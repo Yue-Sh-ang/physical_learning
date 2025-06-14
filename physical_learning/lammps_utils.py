@@ -317,7 +317,7 @@ def setup_quench(odir,lmp_path,applied_args,temp,etol=1e-10,ftol=1e-8,maxiter=50
 	
 	
 	allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
-	allo.write_quench_input(allo, odir+infile, datafile,temp,etol=etol,ftol=ftol,maxiter=maxiter,dt=dt)
+	allo.write_quench_input(odir+infile, datafile, temp, etol=etol, ftol=ftol, maxiter=maxiter, dt=dt)
 	
 	allo.save(odir+'allo.txt') # do this last, because it resets init!!
 
