@@ -2528,8 +2528,7 @@ class Allosteric(Elastic):
 				f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
 
 			f.write('variable 			duration equal {:12g}/dt\n'.format(duration))
-			f.write('variable			frames equal {:d}\n'.format(frames))
-			f.write('variable			step equal ${duration}/${frames}\n')
+			
 
 			if temp > 0:
 				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp,temp))
@@ -2552,6 +2551,58 @@ class Allosteric(Elastic):
 			if method != None:
 				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
+	
+	def write_quench_input(self, filename, datafile,temp,etol=1e-10,ftol=1e-8,maxiter=50000,dt=0.005):
+		'''Write the input file for a LAMMPS energy minimization (quench) run.
+
+	Parameters
+	----------
+	filename : str
+    	Name of the LAMMPS input script.
+	datafile : str
+    	Input data file to read (initial configuration).
+	dumpfile : str
+    	Currently unused) Placeholder for consistency.
+	temp : float
+    	Temperature for randomizing initial velocities before quench.
+	etol : float
+    	Energy tolerance for minimization.
+	ftol : float
+    	Force tolerance for minimization.
+	maxiter : int
+    	Maximum number of iterations.
+	dt : float
+    	Timestep (not used in minimization, but LAMMPS requires it to be set).
+	'''
+
+		with open(filename, 'w') as f:
+			f.write('units				lj\n')
+			f.write('timestep			{:.15g}\n'.format(dt))
+			f.write('dimension			{:d}\n'.format(self.dim))
+			f.write('atom_style			bond\n')
+
+			
+			if self.dim == 2:
+				f.write('boundary			s s p\n')
+			else:
+				f.write('boundary			s s s\n')
+
+			f.write('bond_style 		harmonic\n\n')
+
+			f.write('read_data			{:s}\n\n'.format(datafile))
+			
+			if self.dim == 2:
+				f.write('fix				dim all enforce2d\n')
+			f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
+
+			f.write('min_style fire\n')
+			f.write(f'minimize {etol:.1e} {ftol:.1e} {maxiter} {maxiter}\n\n')
+			f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
+
+
+			
+			
+				
 	def write_job(self, filename, jobname, hours, cmd):
 		'''Write a shell script for submitting a job to SLURM.
 		

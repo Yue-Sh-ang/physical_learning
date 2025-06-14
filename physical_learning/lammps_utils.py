@@ -297,3 +297,38 @@ def get_clusters(data, n, seed=12):
 	score = silhouette_score(data.reshape(-1,1), labels)
 	return labels, score
 
+def setup_quench(odir,lmp_path,applied_args,temp,etol=1e-10,ftol=1e-8,maxiter=50000,dt=0.005):
+	'''Set up a quench simulation in a directory.
+
+	This function creates a directory for the quench simulation, sets up the
+	LAMMPS input file, and writes the necessary files for the simulation.
+	'''
+	allo, data, cols = load_run(odir)
+
+	odir = odir+'/quench/'
+	if not os.path.exists(odir):
+		os.makedirs(odir)
+	prefix = 'quench'
+
+	datafile = prefix+'.data'
+	infile= prefix+'.in'
+	logfile = prefix+'.log'
+	jobfile = 'job.sh'
+	
+	
+	allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
+	allo.write_quench_input(allo, odir+infile, datafile,temp,etol=etol,ftol=ftol,maxiter=maxiter,dt=dt)
+	
+	allo.save(odir+'allo.txt') # do this last, because it resets init!!
+
+	cmd = lmp_path+' -i '+infile+' -log '+logfile
+
+	allo.write_job(odir+jobfile, prefix+'_test', 1, cmd)#hours=1, quench should be fast
+	
+	with open('tasks.sh', 'a') as f:
+		f.write(f"cd {odir}\n")
+		f.write(f"sbatch ./{jobfile}\n")
+	
+	print("LAMMPS quench simulation set up in directory: {:s}".format(odir))
+
+
