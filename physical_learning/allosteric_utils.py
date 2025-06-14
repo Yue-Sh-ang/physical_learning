@@ -2552,7 +2552,7 @@ class Allosteric(Elastic):
 				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
 	
-	def write_quench_input(self, filename, datafile,temp,etol=1e-10,ftol=1e-8,maxiter=50000,dt=0.005):
+	def write_quench_input(self, filename, datafile,temp,etol=0,ftol=1e-8,maxiter=50000,dt=0.005):
 		'''Write the input file for a LAMMPS energy minimization (quench) run.
 
 	Parameters
