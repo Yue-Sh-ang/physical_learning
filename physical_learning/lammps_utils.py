@@ -219,11 +219,11 @@ def load_run(odir):
 	allo : Allosteric
 		Allosteric Class object with network set up according to provided LAMMPS datafile,
 		with simulation history loaded from dumpfile (if present).
-	data : ndarray
+	data : ndarray or None
 		The log data (typically printed to screen) of the simulation at each
-		integration timestep.
-	cols : list of str
-		The column names associated with each data column.
+		integration timestep, or None if no dump file is present.
+	cols : list of str or None
+		The column names associated with each data column, or None if no dump file is present.
 	'''
 
 	# collect all filenames
@@ -244,38 +244,41 @@ def load_run(odir):
 	if dim != allo.dim:
 		raise ValueError("Dimension mismatch between LAMMPS simulation (d={:d}) and network file (d={:d}).".format(dim,allo.dim))
 	read_data(datafile, allo.graph)
+
+	if not has_dump:
+		return allo, None, None
+
 	data, cols = read_log(logfile)
 	allo.t_eval = data[:,cols.index('Time')]
 
-	if has_dump:
-		traj, vtraj = read_dump(dumpfile)
-		if traj.shape[1] == allo.n: # free state only
-			allo.traj = np.copy(traj)
-			allo.vtraj = np.copy(vtraj)
-			allo.traj_c = np.copy(traj)
-			allo.vtraj_c = np.copy(vtraj)
-			allo.traj_s = np.copy(traj)
-			allo.vtraj_s = np.copy(vtraj)
-			allo.traj_sc = np.copy(traj)
-			allo.vtraj_sc = np.copy(vtraj)
-		elif traj.shape[1] == 2*allo.n: # free and clamped states
-			allo.traj = np.copy(traj[:,1::2,:])
-			allo.vtraj = np.copy(vtraj[:,1::2,:])
-			allo.traj_c = np.copy(traj[:,::2,:])
-			allo.vtraj_c = np.copy(vtraj[:,::2,:])
-			allo.traj_s = np.copy(traj[:,1::2,:])
-			allo.vtraj_s = np.copy(vtraj[:,1::2,:])
-			allo.traj_sc = np.copy(traj[:,::2,:])
-			allo.vtraj_sc = np.copy(vtraj[:,::2,:])
-		else: # symmetric free and clamped states
-			allo.traj = np.copy(traj[:,1::4,:])
-			allo.vtraj = np.copy(vtraj[:,1::4,:])
-			allo.traj_c = np.copy(traj[:,::4,:])
-			allo.vtraj_c = np.copy(vtraj[:,::4,:])
-			allo.traj_s = np.copy(traj[:,3::4,:])
-			allo.vtraj_s = np.copy(vtraj[:,3::4,:])
-			allo.traj_sc = np.copy(traj[:,2::4,:])
-			allo.vtraj_sc = np.copy(vtraj[:,2::4,:])
+	traj, vtraj = read_dump(dumpfile)
+	if traj.shape[1] == allo.n: # free state only
+		allo.traj = np.copy(traj)
+		allo.vtraj = np.copy(vtraj)
+		allo.traj_c = np.copy(traj)
+		allo.vtraj_c = np.copy(vtraj)
+		allo.traj_s = np.copy(traj)
+		allo.vtraj_s = np.copy(vtraj)
+		allo.traj_sc = np.copy(traj)
+		allo.vtraj_sc = np.copy(vtraj)
+	elif traj.shape[1] == 2*allo.n: # free and clamped states
+		allo.traj = np.copy(traj[:,1::2,:])
+		allo.vtraj = np.copy(vtraj[:,1::2,:])
+		allo.traj_c = np.copy(traj[:,::2,:])
+		allo.vtraj_c = np.copy(vtraj[:,::2,:])
+		allo.traj_s = np.copy(traj[:,1::2,:])
+		allo.vtraj_s = np.copy(vtraj[:,1::2,:])
+		allo.traj_sc = np.copy(traj[:,::2,:])
+		allo.vtraj_sc = np.copy(vtraj[:,::2,:])
+	else: # symmetric free and clamped states
+		allo.traj = np.copy(traj[:,1::4,:])
+		allo.vtraj = np.copy(vtraj[:,1::4,:])
+		allo.traj_c = np.copy(traj[:,::4,:])
+		allo.vtraj_c = np.copy(vtraj[:,::4,:])
+		allo.traj_s = np.copy(traj[:,3::4,:])
+		allo.vtraj_s = np.copy(vtraj[:,3::4,:])
+		allo.traj_sc = np.copy(traj[:,2::4,:])
+		allo.vtraj_sc = np.copy(vtraj[:,2::4,:])
 
 	return allo, data, cols
 
