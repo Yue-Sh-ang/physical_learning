@@ -2528,8 +2528,8 @@ class Allosteric(Elastic):
 				f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
 
 			f.write('variable 			duration equal {:12g}/dt\n'.format(duration))
-			
-
+			f.write('variable			frames equal {:d}\n'.format(frames))
+			f.write('variable			step equal ${duration}/${frames}\n')
 			if temp > 0:
 				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp,temp))
 				f.write('fix				intgr all nve\n')
