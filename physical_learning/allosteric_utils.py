@@ -1827,7 +1827,7 @@ class Allosteric(Elastic):
 		if self.dim == 2: self._mode_plot_2d(v, scale, arrows, disks, figsize, filename)
 		else: self._mode_plot_3d(v, scale, arrows, disks, figsize, filename)
 
-	def _mode_plot_2d(self, v, scale, arrows=True, disks=False, figsize=(5,5), filename=None):
+	def _mode_plot_2d(self, v, scale,ax=None, arrows=True, disks=False, figsize=(5,5), filename=None):
 		# Determine if v is 2n or 3n
 		if v.shape[0] == 2 * self.n:
 			vx = v[::2]
@@ -1838,7 +1838,12 @@ class Allosteric(Elastic):
 
 		# Plot the network with source and target edges and nodes.
 		self.reset_init()
-		fig, ax = plt.subplots(1,1,figsize=figsize)
+		if ax is None:
+			fig, ax = plt.subplots(1, 1, figsize=figsize)
+			is_standalone = True
+		else:
+			fig = ax.get_figure()
+			is_standalone = False
 		fac = 4
 
 		e = self._collect_edges()
@@ -1895,94 +1900,13 @@ class Allosteric(Elastic):
 		ax.set_xlim(-lim,lim)
 		ax.set_ylim(-lim,lim)
 		ax.axis('off')
+		if is_standalone:
+			fig.tight_layout()
+			if filename:
+				fig.savefig(filename, bbox_inches='tight')
+			plt.show()
 
-		fig.tight_layout()
-		if filename:
-			fig.savefig(filename, bbox_inches='tight')
-		plt.show()
-
-		# Plot the network with source and target edges and nodes.
-		self.reset_init()
-		fig, ax = plt.subplots(1,1,figsize=figsize)
-		fac = 4
-
-		e = self._collect_edges()
-		eci = mc.LineCollection(e[:,:,:self.dim], colors=[0.6,0.6,0.6], linewidths=0.5, linestyle='dashed')
-		ax.add_collection(eci)
-
-		if arrows:
-			# color repeats every 2*pi
-			col = np.arctan2(vy, vx)
-			norm = mpl.colors.Normalize(vmin=-np.pi, vmax=np.pi)
-
-			#ax.quiver(self.pts[:,0][self.degree>0], self.pts[:,1][self.degree>0],
-			#		  v[::3], v[1::3], col, angles='xy', scale=fac/scale, cmap=cyclic_cmap, norm=norm)
-
-			for source in self.sources:
-				s = self.plot_source(ax, source)
-			for target in self.targets:
-				t = self.plot_target(ax, target)
-
-			# interpolate displacement field
-			xmin, ymin, zmin = np.min(self.pts, axis=0)
-			xmax, ymax, zmax = np.max(self.pts, axis=0)
-			X, Y = np.meshgrid(np.linspace(xmin, xmax, 100), np.linspace(ymin, ymax, 100))
-			#Zx = griddata(self.pts[:,:self.dim][self.degree>0], v[::3], (X,Y), method='linear')
-			#Zy = griddata(self.pts[:,:self.dim][self.degree>0], v[1::3], (X,Y), method='linear')
-			ix = CloughTocher2DInterpolator(self.pts[:,:self.dim][self.degree>0], vx)
-			iy = CloughTocher2DInterpolator(self.pts[:,:self.dim][self.degree>0], vy)
-			Zx = ix(X, Y)
-			Zy = iy(X, Y)
-			Z = np.arctan2(Zy, Zx)
-			#cf = plt.pcolormesh(X, Y, Z, cmap=cyclic_cmap, norm=norm, shading='gouraud', zorder=0, alpha=0.2)
-
-			strm = ax.streamplot(X, Y, Zx, Zy, color='k', linewidth=1, density=3)
-			#strm = ax.streamplot(X, Y, Zx, Zy, color=Z, cmap=cyclic_cmap, norm=norm, linewidth=1, density=2)
-			'''
-			Zgx = np.gradient(Zx)
-			Zgy = np.gradient(Zy)
-			# project onto vector orthogonal to Zx and Zy at every point
-			Zgpx = (Zgx[0] * Zy - Zgx[1] * Zx)/np.sqrt(Zx**2 + Zy**2)
-			Zgpy = (Zgy[0] * Zy - Zgy[1] * Zx)/np.sqrt(Zx**2 + Zy**2)
-			Zgp = np.sqrt(Zgpx**2 + Zgpy**2)
-			cf = plt.pcolormesh(X, Y, Zgp, cmap=plt.cm.Blues, norm=mpl.colors.Normalize(vmin=0, vmax=fac/scale/self.n),
-				shading='gouraud', zorder=0, alpha=0.2)
-			'''
-
-		else:
-			# add offset
-			self.pts[:,0][self.degree>0] += scale*vx/fac
-			self.pts[:,1][self.degree>0] += scale*vy/fac
-
-			e = self._collect_edges()
-			ec = mc.LineCollection(e[:,:,:self.dim], colors='k', linewidths=0.5)
-			ax.add_collection(ec)
-
-		if disks:
-			# here color repeats every pi
-			col = np.arctan2(vy, vx)
-			col[col<0] += np.pi
-			norm = mpl.colors.Normalize(vmin=0, vmax=np.pi)
-			r = scale*np.sqrt(vx**2+vy**2)/fac
-
-			dc = mc.EllipseCollection(r, r, np.zeros_like(r), offsets=self.pts[self.degree>0,:self.dim],
-										  transOffset=ax.transData, units='x',
-										  edgecolor='k', facecolor=cyclic_cmap(norm(col)), linewidths=0.5, zorder=100)
-			ax.add_collection(dc)
-
-		# reset
-		self.reset_init()
-
-		lim = (1+2./np.sqrt(self.n))*np.max(np.abs(self.pts))
-		ax.set_xlim(-lim,lim)
-		ax.set_ylim(-lim,lim)
-		ax.axis('off')
-
-		fig.tight_layout()
-		if filename:
-			fig.savefig(filename, bbox_inches='tight')
-		plt.show()
-
+ 
 	def _mode_plot_3d(self, v, scale, arrows=True, disks=False, figsize=(5,5), filename=None):
 
 		fig, ax = plt.subplots(1,1,figsize=figsize)
