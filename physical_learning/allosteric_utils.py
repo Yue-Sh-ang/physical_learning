@@ -1803,7 +1803,7 @@ class Allosteric(Elastic):
 				fig.savefig(filename, bbox_inches='tight', dpi=300)
 			plt.show()
 			
-	def mode_plot(self, v, scale, arrows=True, disks=False, figsize=(5,5), filename=None):
+	def mode_plot(self, v, scale, ax=None,arrows=True, disks=False, figsize=(5,5), filename=None):
 		'''Plot a deformation mode (displacement) of the network.
 		
 		Parameters
@@ -1824,7 +1824,7 @@ class Allosteric(Elastic):
 			The name of the file for saving the plot.
 		'''
 
-		if self.dim == 2: self._mode_plot_2d(v, scale, arrows, disks, figsize, filename)
+		if self.dim == 2: self._mode_plot_2d(v, scale,ax, arrows, disks, figsize, filename)
 		else: self._mode_plot_3d(v, scale, arrows, disks, figsize, filename)
 
 	def _mode_plot_2d(self, v, scale,ax=None, arrows=True, disks=False, figsize=(5,5), filename=None):
