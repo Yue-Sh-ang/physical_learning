@@ -311,7 +311,7 @@ def get_clusters(data, n, seed=12):
 	score = silhouette_score(data.reshape(-1,1), labels)
 	return labels, score
 
-def setup_quench(allo,odir,lmp_path,applied_args,temp,etol=1e-12,ftol=1e-10,maxiter=50000,dt=0.005):
+def setup_quench(allo,odir,lmp_path,applied_args,temp,etol=0,ftol=1e-10,maxiter=50000,dt=0.005):
 	'''Set up a quench simulation in a directory.
 
 	This function creates a directory for the quench simulation, sets up the
