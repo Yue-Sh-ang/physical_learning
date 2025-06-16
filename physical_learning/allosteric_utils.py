@@ -2552,7 +2552,7 @@ class Allosteric(Elastic):
 				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
 	
-	def write_quench_input(self, filename, datafile,temp,etol=1e-12,ftol=1e-10,maxiter=50000,dt=0.005):
+	def write_quench_input(self, filename, datafile,dumpfile,temp,etol=1e-12,ftol=1e-10,maxiter=50000,dt=0.005):
 		'''Write the input file for a LAMMPS energy minimization (quench) run.
 
 	Parameters
@@ -2593,10 +2593,17 @@ class Allosteric(Elastic):
 			
 			if self.dim == 2:
 				f.write('fix				dim all enforce2d\n')
+
+			# Define common dump (shared file)
+			f.write('dump            out all custom 1 {:s} x y z vx vy vz\n'.format(dumpfile))
+			f.write('dump_modify     out format line "%.15g %.15g %.15g %.15g %.15g %.15g"\n\n')
+			f.write('run             0\n\n')
 			f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
 
 			f.write('min_style fire\n')
 			f.write(f'minimize {etol:.1e} {ftol:.1e} {maxiter} {maxiter}\n\n')
+			f.write('run             0\n\n')
+			f.write('undump          out\n')
 			f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
 

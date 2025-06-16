@@ -56,39 +56,42 @@ def read_dump(filename):
 	return traj, vtraj
 
 def read_log(filename):
-	'''Read a LAMMPS log file.
-	   
-	Parameters
-	----------
-	filename : str
-		The name of the file to read.
+    '''Read timestep data from a LAMMPS log file, stopping at "Loop".
 
-	Returns
-	-------
-	data : ndarray
-		The log data (typically printed to screen) of the simulation at each
-		integration timestep.
-	cols : list of str
-		The column names associated with each data column.
-	'''
+    Parameters
+    ----------
+    filename : str
+        The name of the LAMMPS log file to read.
 
-	with open(filename, 'r') as f:
-		lines = f.readlines()
-		i = 0
-		line  = lines[i].strip().split()
-		while (len(line) < 1) or not ((line[0] == 'variable') and (line[1] == 'frames')):
-			i += 1
-			line  = lines[i].strip().split()
-		nstep = int(line[3]) + 1
-		while (len(line) < 1) or (line[0] != 'Step'):
-			i += 1
-			line  = lines[i].strip().split()
-		cols = line
-		ncol = len(cols)
-		data = np.zeros((nstep, ncol))
-		for j in range(nstep):
-			data[j] = np.array(lines[i+j+1].strip().split()).astype(float)
-	return data, cols
+    Returns
+    -------
+    data : ndarray
+        The timestep data from the log file.
+    cols : list of str
+        The column names associated with each data column.
+    '''
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+
+    data = []
+    reading = False
+
+    for line in lines:
+        line = line.strip()
+        if line.startswith('Step'):
+            cols = line.split()
+            reading = True
+            continue
+        if line.startswith('Loop'):
+            break
+        if reading and line:
+            try:
+                data.append([float(x) for x in line.split()])
+            except ValueError:
+                # skip lines that can't be parsed as floats
+                continue
+
+    return np.array(data), cols
 
 def read_data(filename, graph):
 	'''Read a LAMMPS data file and update a graph based on its contents.
@@ -322,12 +325,13 @@ def setup_quench(allo,odir,lmp_path,applied_args,temp,etol=1e-12,ftol=1e-10,maxi
 
 	datafile = prefix+'.data'
 	infile= prefix+'.in'
+	dumpfile = prefix+'.dump'
 	logfile = prefix+'.log'
 	jobfile = 'job.sh'
 	
 	
 	allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
-	allo.write_quench_input(odir+infile, datafile, temp, etol=etol, ftol=ftol, maxiter=maxiter, dt=dt)
+	allo.write_quench_input(odir+infile, datafile, dumpfile,temp, etol=etol, ftol=ftol, maxiter=maxiter, dt=dt)
 	
 	allo.save(odir+'allo.txt') # do this last, because it resets init!!
 
