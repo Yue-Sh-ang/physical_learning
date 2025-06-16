@@ -252,7 +252,8 @@ def load_run(odir):
 		return allo, None, None
 
 	data, cols = read_log(logfile)
-	allo.t_eval = data[:,cols.index('Time')]
+	if 'Time' in cols:
+		allo.t_eval = data[:, cols.index('Time')]
 
 	traj, vtraj = read_dump(dumpfile)
 	if traj.shape[1] == allo.n: # free state only
