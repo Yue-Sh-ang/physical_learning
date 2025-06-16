@@ -56,42 +56,46 @@ def read_dump(filename):
 	return traj, vtraj
 
 def read_log(filename):
-    '''Read timestep data from a LAMMPS log file, stopping at "Loop".
+    """
+    Reads LAMMPS log file and returns data between the 'Step' and 'Loop' lines.
 
     Parameters
     ----------
     filename : str
-        The name of the LAMMPS log file to read.
+        The name of the log file to read.
 
     Returns
     -------
     data : ndarray
-        The timestep data from the log file.
+        The parsed log data from 'Step' to 'Loop'.
     cols : list of str
-        The column names associated with each data column.
-    '''
+        Column names.
+    """
     with open(filename, 'r') as f:
         lines = f.readlines()
 
-    data = []
+    data_lines = []
+    cols = []
     reading = False
 
     for line in lines:
         line = line.strip()
-        if line.startswith('Step'):
+        if not line:
+            continue
+        if line.startswith("Step"):
             cols = line.split()
             reading = True
             continue
-        if line.startswith('Loop'):
+        if line.startswith("Loop"):
             break
-        if reading and line:
-            try:
-                data.append([float(x) for x in line.split()])
-            except ValueError:
-                # skip lines that can't be parsed as floats
-                continue
+        if reading:
+            data_lines.append([float(x) for x in line.split()])
 
-    return np.array(data), cols
+    if not data_lines:
+        raise ValueError("No data found between 'Step' and 'Loop' in log file.")
+
+    data = np.array(data_lines)
+    return data, cols
 
 def read_data(filename, graph):
 	'''Read a LAMMPS data file and update a graph based on its contents.
