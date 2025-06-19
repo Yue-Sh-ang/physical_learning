@@ -508,6 +508,18 @@ class Elastic(object):
 		en += self._applied_energy(t, n, q, T, applied_args)
 		return en
 
+	def elastic_energy(self, frame):
+		en = 0
+		q=self.traj[frame]
+		edge_i, edge_j, edge_k, edge_l, edge_t = self._edge_lists()
+		for e,(i, j) in enumerate(zip(edge_i, edge_j)):
+			xi, yi, zi = q[3*i], q[3*i+1], q[3*i+2]
+			xj, yj, zj = q[3*j], q[3*j+1], q[3*j+2]
+			dx = xi-xj; dy = yi-yj; dz = zi-zj
+			r = np.sqrt(dx**2 + dy**2 + dz**2)
+			en += edge_k[e]*(r-edge_l[e])**2
+		return en
+
 	def _applied_energy(self, t, n, q, T, applied_args):
 		raise NotImplementedError
 
