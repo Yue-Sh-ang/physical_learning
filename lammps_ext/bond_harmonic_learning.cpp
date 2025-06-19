@@ -192,7 +192,7 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
       }
 
       else { // coupled learning
-        dl = -alpha[type]/eta[type] * k[type]*(r_f-r_c+(lfac-1)*r0[type])*sf;
+        dl = -alpha[type]/eta[type] * k[type]*(r_f-lfac*r_c+(lfac*lfac-1)*r0[type])*sf;
         r0[type] += dl;
       }
 
