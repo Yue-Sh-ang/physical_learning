@@ -77,7 +77,7 @@ class Allosteric(Elastic):
 		The corresponding time at each simulated frame.
 	'''
 	
-	def __init__(self, graph, dim=2, params={'rfac':0.05, 'drag':0.01, 'dashpot':10., 'stiffness':1.}):
+	def __init__(self, graph, dim=2,sigma=0, params={'rfac':0.05, 'drag':0.01, 'dashpot':10., 'stiffness':1.}):
 		
 		if (dim != 2) and (dim != 3):
 			raise ValueError("Dimension must be 2 or 3.")
@@ -91,7 +91,7 @@ class Allosteric(Elastic):
 
 		# Call superclass (Elastic) constructor and remove nodes
 		# with a single bond.
-		super().__init__(graph, dim, params)
+		super().__init__(graph, dim,sigma, params)
 		self._remove_dangling_edges()
 
 	'''
