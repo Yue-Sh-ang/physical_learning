@@ -66,7 +66,7 @@ class Elastic(object):
 		The corresponding time at each simulated frame.
 	'''
 
-	def __init__(self, graph, dim=2, params={'rfac':0.05, 'drag':0.005, 'dashpot':10., 'stiffness':1.}):
+	def __init__(self, graph, dim=2,sigma=0, params={'rfac':0.05, 'drag':0.005, 'dashpot':10., 'stiffness':1.}):
 
 		if (dim != 2) and (dim != 3):
 			raise ValueError("Dimension must be 2 or 3.")
@@ -94,7 +94,7 @@ class Elastic(object):
 			nx.set_edge_attributes(self.graph, self.params['stiffness'], 'stiffness')
 		if 'length' not in list(self.graph.edges(data=True))[0][2]:
 			nx.set_edge_attributes(self.graph, 1., 'length')
-			min_l = self._set_attributes()
+			min_l = self._set_attributes(sigma)
 		else:
 			min_l = np.min([edge[2]['length'] for edge in self.graph.edges(data=True)])
 		self.params['radius'] = self.params['rfac']*min_l
@@ -118,16 +118,24 @@ class Elastic(object):
 	*****************************************************************************************************
 	'''
 
-	def _set_attributes(self):
+	def _set_attributes(self,sigma=0):
 		'''Set the rest length attribute of each edge.'''
 
 		min_l = 0
+		# calculate the relaxed length
 		for edge in self.graph.edges(data=True):
 			i = edge[0]; j = edge[1]
 			l = self._distance(self.pts[i], self.pts[j])
 			edge[2]['length'] = l
 			if l > min_l:
 				min_l = l
+		# add a small random perturbation to the rest length
+		if sigma > 1 or sigma < 0:
+			raise ValueError("Sigma must be between 0 and 1.")
+		if sigma > 0:
+			for edge in self.graph.edges(data=True):
+				edge[2]['length'] += np.random.normal(0, sigma*min_l)
+
 		return min_l
 
 	def _set_degree(self):
