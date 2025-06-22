@@ -2198,7 +2198,7 @@ class Allosteric(Elastic):
 
 
 	
-	def distribution_plot(self, kind='stiffness', vmin=0, vmax=2, nbins=25, figsize=(2.5, 2), filename=None, ax=None):
+	def distribution_plot(self, kind='stiffness', vmin=None, vmax=None, nbins=25, figsize=(2.5, 2), filename=None, ax=None):
 		'''Make a distribution plot on a given axis, or create a new figure.
 
 		Parameters
@@ -2240,7 +2240,10 @@ class Allosteric(Elastic):
 		v = np.zeros(self.ne)
 		for e, edge in enumerate(self.graph.edges(data=True)):
 			v[e] = edge[2][kind]
-
+		if vmax is None:
+			vmax = np.max(v)
+		if vmin is None:
+			vmin = np.min(v)
 		bins = np.linspace(vmin, vmax, nbins)
 		x = 0.5 * (bins[1:] + bins[:-1])
 		y = np.histogram(v, bins)[0]
