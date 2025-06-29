@@ -2627,8 +2627,7 @@ class Allosteric(Elastic):
 		with open(filename, 'w') as f:
 			f.write('#!/bin/bash\n')
 			f.write('#SBATCH --job-name="{:s}"\n'.format(jobname))
-			f.write('#SBATCH --partition=testing\n')
-			f.write('#SBATCH --qos=testing\n')
+			f.write('#SBATCH --partition=liu_compute\n')
 			f.write('#SBATCH --nodes=1\n')
 			f.write('#SBATCH --ntasks-per-node=1\n')
 			f.write('#SBATCH --cpus-per-task=1\n')
