@@ -1876,6 +1876,11 @@ class Allosteric(Elastic):
 			# add offset
 			self.pts[:,0][self.degree>0] += scale*vx/fac
 			self.pts[:,1][self.degree>0] += scale*vy/fac
+			
+			for source in self.sources:
+				s = self.plot_source(ax, source)
+			for target in self.targets:
+				t = self.plot_target(ax, target)
 
 			e = self._collect_edges()
 			ec = mc.LineCollection(e[:,:,:self.dim], colors='k', linewidths=0.5)
