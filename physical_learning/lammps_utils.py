@@ -210,27 +210,24 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 	
 	print("LAMMPS simulation set up in directory: {:s}".format(odir))
 
-def load_run(odir):
+def load_run(odir, history=True):
 	'''Load a complete LAMMPS simulation from its directory.
 
 	The directory should contain an Allosteric network file, LAMMPS datafile,
 	dumpfile, and logfile.
-	   
+
 	Parameters
 	----------
 	odir : str
 		The path to the directory.
+	just_allo : bool, optional
+		If True, only load the Allosteric object without the simulation history.
 
 	Returns
 	-------
 	allo : Allosteric
 		Allosteric Class object with network set up according to provided LAMMPS datafile,
 		with simulation history loaded from dumpfile (if present).
-	data : ndarray or None
-		The log data (typically printed to screen) of the simulation at each
-		integration timestep, or None if no dump file is present.
-	cols : list of str or None
-		The column names associated with each data column, or None if no dump file is present.
 	'''
 
 	# collect all filenames
@@ -252,7 +249,7 @@ def load_run(odir):
 		raise ValueError("Dimension mismatch between LAMMPS simulation (d={:d}) and network file (d={:d}).".format(dim,allo.dim))
 	read_data(datafile, allo.graph)
 
-	if not has_dump:
+	if not has_dump or history==False:
 		return allo, None, None
 
 	data, cols = read_log(logfile)
