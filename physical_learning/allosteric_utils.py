@@ -2550,7 +2550,7 @@ class Allosteric(Elastic):
 			f.write('dump				out all custom ${step}'+' {:s} x y z vx vy vz\n'.format(dumpfile))
 			f.write('dump_modify		out format line "%.15g %.15g %.15g %.15g %.15g %.15g"\n')
 			if doc_bond:
-				f.write('dump                            bondinfo all local ${step} bondinfo.dump index c_1[*]')
+				f.write('dump                            bondinfo all local ${step} bondinfo.dump index c_1[*]\n')
 			f.write('thermo_style    	custom step time temp press vol pe ke\n')
 			f.write('thermo          	${step}\n')
 			f.write('neigh_modify		once yes\n')
