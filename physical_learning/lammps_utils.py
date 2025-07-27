@@ -141,7 +141,7 @@ def read_dim(filename):
 			line = f.readline()
 	return int(line.strip().split()[1])
 
-def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, symmetric=False, dt=0.005, hours=24):
+def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, symmetric=False,doc_bond=False, dt=0.005, hours=24):
 	'''Set up a complete LAMMPS simulation in a directory.
 	   
 	Parameters
@@ -197,13 +197,13 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 										symmetric=symmetric, dt=dt)
 	else:
 		allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
-	allo.write_lammps_input(odir+infile, datafile, dumpfile, duration, frames, temp=temp, method=method, symmetric=symmetric, dt=dt)
+	allo.write_lammps_input(odir+infile, datafile, dumpfile, duration, frames, temp=temp, method=method, symmetric=symmetric,doc_bond=doc_bond, dt=dt)
 	allo.save(odir+'allo.txt') # do this last, because it resets init!!
 
 	cmd = lmp_path+' -i '+infile+' -log '+logfile
 
 	allo.write_job(odir+jobfile, prefix+'_test', hours, cmd)
-	# submit job togeterh
+	# submit job together
 	with open('tasks.sh', 'a') as f:
 		f.write(f"cd {odir}\n")
 		f.write(f"sbatch ./{jobfile}\n")

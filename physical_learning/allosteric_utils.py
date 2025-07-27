@@ -2474,7 +2474,7 @@ class Allosteric(Elastic):
 					f.write('{:d} {:d} {:d} {:d}\n'.format(e+1,e+1,na*target['i']+1,na*target['j']+1))
 					e += 1
 
-	def write_lammps_input(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005):
+	def write_lammps_input(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False,doc_bond=False, dt=0.005):
 		'''Write the input file for a LAMMPS simulation.
 		
 		Parameters
@@ -2534,6 +2534,8 @@ class Allosteric(Elastic):
 			f.write('variable 			duration equal {:12g}/dt\n'.format(duration))
 			f.write('variable			frames equal {:d}\n'.format(frames))
 			f.write('variable			step equal ${duration}/${frames}\n')
+			if doc_bond:
+				f.write('compute                         1 all bond/local dist engpot\n')
 			if temp > 0:
 				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp,temp))
 				f.write('fix				intgr all nve\n')
@@ -2547,6 +2549,8 @@ class Allosteric(Elastic):
 
 			f.write('dump				out all custom ${step}'+' {:s} x y z vx vy vz\n'.format(dumpfile))
 			f.write('dump_modify		out format line "%.15g %.15g %.15g %.15g %.15g %.15g"\n')
+			if doc_bond:
+				f.write('dump                            bondinfo all local ${step} bondinfo.dump index c_1[*]')
 			f.write('thermo_style    	custom step time temp press vol pe ke\n')
 			f.write('thermo          	${step}\n')
 			f.write('neigh_modify		once yes\n')
