@@ -89,9 +89,9 @@ def read_dump_bondinfo(filename):
 		for i in range(n):
 			line = lines[m*fr+h+i]
 			line = np.array(line.strip().split()).astype(float)
-			id, dist, engpot = line[-3], line[-2], line[-1]
-			dist[fr,i,0] = dist
-			engpot[fr,i,0] = engpot
+			id, c1, c2 = line[-3], line[-2], line[-1]
+			dist[fr,i,0] = c1
+			engpot[fr,i,0] = c2
 			
 	return dist, engpot
 
