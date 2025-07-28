@@ -55,6 +55,47 @@ def read_dump(filename):
 
 	return traj, vtraj
 
+
+def read_dump_bondinfo(filename):
+	'''Read a LAMMPS dumpfile.
+	   
+	Parameters
+	----------
+	filename : str
+		The name of the file to read.
+
+	Returns
+	-------
+	ndarray
+		The (x,y) coordinates for each of n points over all output frames.
+	'''
+
+	with open(filename, 'r') as f:
+		lines = f.readlines()
+		if len(lines[0].split()) > 1:
+			n = int(lines[3].split()[0])
+			h = 9
+			m = n+9
+		else:
+			n = int(lines[0].split()[0])
+			h = 2
+		m = n+h
+		frames = len(lines)//m
+
+	dist = np.zeros((frames,n,1))
+	engpot = np.zeros((frames,n,1))
+	
+	for fr in range(frames):
+		for i in range(n):
+			line = lines[m*fr+h+i]
+			line = np.array(line.strip().split()).astype(float)
+			id, dist, engpot = line[-3], line[-2], line[-1]
+			dist[fr,i,0] = dist
+			engpot[fr,i,0] = engpot
+			
+	return dist, engpot
+
+
 def read_log(filename):
     """
     Reads LAMMPS log file and returns data between the 'Step' and 'Loop' lines.
@@ -237,21 +278,26 @@ def load_run(odir, history=True):
 	infile = glob.glob(odir+'*.in')[0]
 	logfile = glob.glob(odir+'*.log')[0]
 
-	# dumpfile is optional
-	dumpfiles = glob.glob(odir+'*.dump')
-	has_dump = len(dumpfiles) > 0
-	if has_dump:
-		dumpfile = dumpfiles[0]
+	dumpfiles = glob.glob(os.path.join(odir, '*.dump'))
+
+	# Separate bondinfo.dump and other dumps
+	has_bondinfo = any(os.path.basename(f) == 'bondinfo.dump' for f in dumpfiles)
+	other_dumps = [f for f in dumpfiles if os.path.basename(f) != 'bondinfo.dump']
+	has_other_dump = len(other_dumps) > 0
+
+	if has_other_dump:
+		dumpfile = other_dumps[0]
 
 	allo = Allosteric(netfile)
 	dim = read_dim(infile)
 	if dim != allo.dim:
 		raise ValueError("Dimension mismatch between LAMMPS simulation (d={:d}) and network file (d={:d}).".format(dim,allo.dim))
 	read_data(datafile, allo.graph)
+	
+	if not has_other_dump or history==False:
+		return allo, None, None,None,None
 
-	if not has_dump or history==False:
-		return allo, None, None
-
+	
 	data, cols = read_log(logfile)
 	if 'Time' in cols:
 		allo.t_eval = data[:, cols.index('Time')]
@@ -284,9 +330,11 @@ def load_run(odir, history=True):
 		allo.vtraj_s = np.copy(vtraj[:,3::4,:])
 		allo.traj_sc = np.copy(traj[:,2::4,:])
 		allo.vtraj_sc = np.copy(vtraj[:,2::4,:])
-
-	return allo, data, cols
-
+	if not has_bondinfo:
+		return allo, data, cols, None, None
+	if has_bondinfo:
+		dist, engpot = read_dump_bondinfo(os.path.join(odir, 'bondinfo.dump'))
+		return allo, data, cols, dist, engpot
 def get_clusters(data, n, seed=12):
 	'''Get k-means clusters.
 
