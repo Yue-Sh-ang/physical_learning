@@ -2559,7 +2559,66 @@ class Allosteric(Elastic):
 			if method != None:
 				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
-	
+	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005):
+		'''Write the input file for a LAMMPS simulation using write_data at each output frame.'''
+		with open(filename, 'w') as f:
+			f.write('units				lj\n')
+			f.write('timestep			{:.15g}\n'.format(dt))
+			f.write('dimension			{:d}\n'.format(self.dim))
+			f.write('atom_style			bond\n')
+
+			if temp == 0:
+				if self.dim == 2:
+					f.write('boundary			f f p\n')
+				else:
+					f.write('boundary			f f f\n')
+			else:
+				if self.dim == 2:
+					f.write('boundary			s s p\n')
+				else:
+					f.write('boundary			s s s\n')
+
+			if method is None:
+				f.write('bond_style 		harmonic\n\n')
+			else:
+				if symmetric:
+					f.write('bond_style 		harmonic/learning/symmetric\n\n')
+				else:
+					f.write('bond_style 		harmonic/learning\n\n')
+
+			f.write('read_data			{:s}\n\n'.format(datafile))
+			if temp > 0:
+				f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
+
+			f.write('variable 			duration equal {:12g}/dt\n'.format(duration))
+			f.write('variable			frames equal {:d}\n'.format(frames))
+			f.write('variable			step equal ${duration}/${frames}\n')
+			
+		if temp > 0:
+			f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp, temp))
+			f.write('fix				intgr all nve\n')
+
+		if temp == 0:
+			f.write('fix				intgr all nve\n')
+			f.write('fix				drag all viscous 2\n')
+		if self.dim == 2:
+			f.write('fix				dim all enforce2d\n')
+
+		# Remove dump
+		# Add thermo
+		f.write('thermo_style    	custom step time temp press vol pe ke\n')
+		f.write('thermo          	${step}\n')
+		f.write('neigh_modify		once yes\n')
+
+		# Add loop with write_data
+		f.write('variable i loop ${frames}\n')
+		f.write('label loop_start\n')
+		f.write('run ${step}\n')
+		f.write('write_data step${i}.bond\n')  # wildcard * inserts current timestep
+		f.write('next i\n')
+		f.write('jump SELF loop_start\n')
+
+
 	def write_quench_input(self, filename, datafile,dumpfile,temp,etol=0,ftol=1e-10,maxiter=50000,dt=0.005):
 		'''Write the input file for a LAMMPS energy minimization (quench) run.
 
