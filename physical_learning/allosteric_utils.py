@@ -2594,29 +2594,29 @@ class Allosteric(Elastic):
 			f.write('variable			frames equal {:d}\n'.format(frames))
 			f.write('variable			step equal ${duration}/${frames}\n')
 			
-		if temp > 0:
-			f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp, temp))
-			f.write('fix				intgr all nve\n')
+			if temp > 0:
+				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp, temp))
+				f.write('fix				intgr all nve\n')
 
-		if temp == 0:
-			f.write('fix				intgr all nve\n')
-			f.write('fix				drag all viscous 2\n')
-		if self.dim == 2:
-			f.write('fix				dim all enforce2d\n')
+			if temp == 0:
+				f.write('fix				intgr all nve\n')
+				f.write('fix				drag all viscous 2\n')
+			if self.dim == 2:
+				f.write('fix				dim all enforce2d\n')
 
-		# Remove dump
-		# Add thermo
-		f.write('thermo_style    	custom step time temp press vol pe ke\n')
-		f.write('thermo          	${step}\n')
-		f.write('neigh_modify		once yes\n')
+			# Remove dump
+			# Add thermo
+			f.write('thermo_style    	custom step time temp press vol pe ke\n')
+			f.write('thermo          	${step}\n')
+			f.write('neigh_modify		once yes\n')
 
-		# Add loop with write_data
-		f.write('variable i loop ${frames}\n')
-		f.write('label loop_start\n')
-		f.write('run ${step}\n')
-		f.write('write_data step${i}.bond\n')  # wildcard * inserts current timestep
-		f.write('next i\n')
-		f.write('jump SELF loop_start\n')
+			# Add loop with write_data
+			f.write('variable i loop ${frames}\n')
+			f.write('label loop_start\n')
+			f.write('run ${step}\n')
+			f.write('write_data step${i}.bond\n')  # wildcard * inserts current timestep
+			f.write('next i\n')
+			f.write('jump SELF loop_start\n')
 
 
 	def write_quench_input(self, filename, datafile,dumpfile,temp,etol=0,ftol=1e-10,maxiter=50000,dt=0.005):
