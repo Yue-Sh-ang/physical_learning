@@ -406,6 +406,37 @@ def load_run(odir, history=True):
 	if has_bondinfo:
 		dist, engpot = read_dump_bondinfo(os.path.join(odir, 'bondinfo.dump'))
 		return allo, data, cols, dist, engpot
+
+def load_frame(odir, frame=200):
+	if odir[-1] != '/' : odir += '/'
+	netfile = glob.glob(odir+'*.txt')[0]
+	datafile = glob.glob(odir+f'step{frame:d}.data')[0]
+	infile = glob.glob(odir+'*.in')[0]
+	
+	
+	allo = Allosteric(netfile)
+	dim = read_dim(infile)
+	if dim != allo.dim:
+		raise ValueError("Dimension mismatch between LAMMPS simulation (d={:d}) and network file (d={:d}).".format(dim,allo.dim))
+	read_data(datafile, allo.graph)
+	return allo
+
+
+def get_traj(odir,nframes=200):
+	for i in range(1,nframes+1):
+		allo = load_frame(odir, frame=i)
+		stiffness = np.array([edge[2]['stiffness'] for edge in allo.graph.edges(data=True)])
+		
+
+		if i == 1:
+			r_traj = np.copy(allo.pts)
+			k_traj = np.copy(stiffness)
+		else:
+			r_traj = np.concatenate((r_traj, allo.pts), axis=0)
+			k_traj = np.concatenate((k_traj, stiffness), axis=0)
+
+	return r_traj, k_traj
+
 def get_clusters(data, n, seed=12):
 	'''Get k-means clusters.
 
