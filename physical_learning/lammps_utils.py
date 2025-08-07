@@ -410,7 +410,7 @@ def load_run(odir, history=True):
 def load_frame(odir, frame=200):
 	if odir[-1] != '/' : odir += '/'
 	netfile = glob.glob(odir+'*.txt')[0]
-	datafile = glob.glob(odir+f'step{frame:d}.data')[0]
+	datafile = glob.glob(odir+f'step{frame:d}.bond')[0]
 	infile = glob.glob(odir+'*.in')[0]
 	
 	
