@@ -180,8 +180,7 @@ def read_data_new(filename, allo):
 		line = f.readline()
 		while len(line.strip().split()) < 1 or line.strip().split()[0] != 'Bond':
 			line = f.readline()
-			if line.endswith("atoms"):  # matches "96 atoms"
-				naline = int(line.strip().split()[0])  
+			
 		f.readline() # empty space
 		for i, edge in enumerate(allo.graph.edges(data=True)):
 			line = f.readline()
@@ -193,7 +192,7 @@ def read_data_new(filename, allo):
 			line = f.readline()
 		f.readline() # empty space
 
-		for i in range(int(naline/2)): 
+		for i in range(allo.n): 
 			line = f.readline()
 			id,_,_, x, y, z,_,_,_ = np.array(line.strip().split())[:9].astype(float)
 			allo.pts[i,0] = x
