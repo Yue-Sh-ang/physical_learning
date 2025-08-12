@@ -472,12 +472,14 @@ def get_traj(odir,nframes=200):
 
 		if i == 1:
 			r_traj = np.copy(allo.pts)
+			rc_traj = np.copy(allo.pts_c)
 			k_traj = np.copy(stiffness)
 		else:
 			r_traj = np.concatenate((r_traj, allo.pts), axis=0)
+			rc_traj = np.concatenate((rc_traj, allo.pts_c), axis=0)
 			k_traj = np.concatenate((k_traj, stiffness), axis=0)
 
-	return r_traj, k_traj
+	return r_traj, rc_traj, k_traj
 
 def get_clusters(data, n, seed=12):
 	'''Get k-means clusters.
