@@ -2474,7 +2474,7 @@ class Allosteric(Elastic):
 					f.write('{:d} {:d} {:d} {:d}\n'.format(e+1,e+1,na*target['i']+1,na*target['j']+1))
 					e += 1
 
-	def write_lammps_input(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False,doc_bond=False, dt=0.005):
+	def write_lammps_input(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False,doc_bond=False, dt=0.005,seed=12):
 		'''Write the input file for a LAMMPS simulation.
 		
 		Parameters
@@ -2529,7 +2529,7 @@ class Allosteric(Elastic):
 
 			f.write('read_data			{:s}\n\n'.format(datafile))
 			if temp > 0:
-				f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
+				f.write('velocity			all create {:.15g} {:d} dist gaussian mom yes rot yes sum no\n\n'.format(temp, seed))
 
 			f.write('variable 			duration equal {:12g}/dt\n'.format(duration))
 			f.write('variable			frames equal {:d}\n'.format(frames))
@@ -2537,7 +2537,7 @@ class Allosteric(Elastic):
 			if doc_bond:
 				f.write('compute                         1 all bond/local dist engpot\n')
 			if temp > 0:
-				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp,temp))
+				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp,temp,seed))
 				f.write('fix				intgr all nve\n')
 				#f.write('fix				therm all nvt temp {:.15g} {:.15g} $(100.0*dt)\n'.format(temp,temp))
 			
@@ -2559,7 +2559,7 @@ class Allosteric(Elastic):
 			if method != None:
 				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
-	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005):
+	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005,seed=12):
 		'''Write the input file for a LAMMPS simulation using write_data at each output frame.'''
 		with open(filename, 'w') as f:
 			f.write('units				lj\n')
@@ -2588,14 +2588,14 @@ class Allosteric(Elastic):
 
 			f.write('read_data			{:s}\n\n'.format(datafile))
 			if temp > 0:
-				f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
+				f.write('velocity			all create {:.15g} {:d} dist gaussian mom yes rot yes sum no\n\n'.format(temp, seed))
 
 			f.write('variable 			duration equal {:12g}/dt\n'.format(duration))
 			f.write('variable			frames equal {:d}\n'.format(frames))
 			f.write('variable			step equal ${duration}/${frames}\n')
 			
 			if temp > 0:
-				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) 12 zero yes\n'.format(temp, temp))
+				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
 				f.write('fix				intgr all nve\n')
 
 			if temp == 0:
