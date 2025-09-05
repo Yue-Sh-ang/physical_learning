@@ -48,6 +48,8 @@ BondHarmonicLearning::~BondHarmonicLearning()
     memory->destroy(mode);
     memory->destroy(phase);
     memory->destroy(target);
+    memory->destroy(v);
+    memory->destroy(beta);
   }
 }
 
@@ -164,6 +166,7 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
     }
 
     // Update stiffness for next integration step
+    // Update learning rules with EMA smoothing
     if (train[type] == 2) {
 
       if (mode[type] == 1) { // directed aging
@@ -171,7 +174,13 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
         k[type] += dk;
       }
 
-      else { // coupled learning
+      if (mode[type] == 3) { // coupled learning with momentum
+        double G = (dr_f * dr_f - dr_c * dr_c);
+        v[type] = beta[type] * v[type] + (1 - beta[type]) * G;
+        k[type] += alpha[type]/eta[type] * v[type];
+      }
+
+      if (mode[type] == 2) { // coupled learning //original version
         dk = alpha[type]/eta[type] * (dr_f * dr_f - dr_c * dr_c);
         k[type] += dk;
       }
@@ -179,7 +188,7 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
       if (k[type] < vmin[type]) k[type] = vmin[type];
 
     }
-    if (train[type] == 1) { // update rest length
+    if (train[type] == 1) { // update rest length //need to update 
       double lsmooth = vmin[type]*2;
       double s=(r0[type]-vmin[type])/(lsmooth-vmin[type]); //I need add lmin and lsmooth similar as vmin
 			if (s < 0){s = 0;}
@@ -217,7 +226,8 @@ void BondHarmonicLearning::allocate()
   memory->create(mode, np1, "bond:mode");
   memory->create(phase, np1, "bond:phase");
   memory->create(target, np1, "bond:target");
-
+  memory->create(v, np1, "bond:v");
+  memory->create(beta, np1, "bond:beta");
   memory->create(setflag, np1, "bond:setflag");
   for (int i = 1; i < np1; i++) setflag[i] = 0;
 }
@@ -228,7 +238,8 @@ void BondHarmonicLearning::allocate()
 
 void BondHarmonicLearning::coeff(int narg, char **arg)
 {
-  if (narg != 11) error->all(FLERR, "Incorrect args for bond coefficients");
+  if (narg != 11 && narg != 13) error->all(FLERR, "Incorrect args for bond coefficients");
+
   if (!allocated) allocate();
 
   int ilo, ihi;
@@ -245,6 +256,12 @@ void BondHarmonicLearning::coeff(int narg, char **arg)
   int mode_one = utils::inumeric(FLERR, arg[8], false, lmp);
   int phase_one = utils::inumeric(FLERR, arg[9], false, lmp);
   int target_one = utils::inumeric(FLERR, arg[10], false, lmp);
+  double v_one = 0.0;
+  double beta_one = 0.0;
+  if (narg == 13) {
+    v_one = utils::numeric(FLERR, arg[11], false, lmp);
+    beta_one = utils::numeric(FLERR, arg[12], false, lmp);
+  }
 
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
@@ -258,6 +275,8 @@ void BondHarmonicLearning::coeff(int narg, char **arg)
     mode[i] = mode_one;
     phase[i] = phase_one;
     target[i] = target_one;
+    v[i] = v_one;
+    beta[i] = beta_one;
     setflag[i] = 1;
     count++;
   }
@@ -290,6 +309,10 @@ void BondHarmonicLearning::write_restart(FILE *fp)
   fwrite(&mode[1], sizeof(int), atom->nbondtypes, fp);
   fwrite(&phase[1], sizeof(int), atom->nbondtypes, fp);
   fwrite(&target[1], sizeof(int), atom->nbondtypes, fp);
+  if (mode[1] == 3) {
+  fwrite(&v[1], sizeof(double), atom->nbondtypes, fp);
+  fwrite(&beta[1], sizeof(double), atom->nbondtypes, fp);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -311,6 +334,11 @@ void BondHarmonicLearning::read_restart(FILE *fp)
     utils::sfread(FLERR, &mode[1], sizeof(int), atom->nbondtypes, fp, nullptr, error);
     utils::sfread(FLERR, &phase[1], sizeof(int), atom->nbondtypes, fp, nullptr, error);
     utils::sfread(FLERR, &target[1], sizeof(int), atom->nbondtypes, fp, nullptr, error);
+     // only read v if mode == 3
+    if (mode[1] == 3) {
+      utils::sfread(FLERR, &v[1], sizeof(double), atom->nbondtypes, fp, nullptr, error);
+      utils::sfread(FLERR, &beta[1], sizeof(double), atom->nbondtypes, fp, nullptr, error);
+    }
   }
   MPI_Bcast(&k[1], atom->nbondtypes, MPI_DOUBLE, 0, world);
   MPI_Bcast(&r0[1], atom->nbondtypes, MPI_DOUBLE, 0, world);
@@ -322,6 +350,11 @@ void BondHarmonicLearning::read_restart(FILE *fp)
   MPI_Bcast(&mode[1], atom->nbondtypes, MPI_INT, 0, world);
   MPI_Bcast(&phase[1], atom->nbondtypes, MPI_INT, 0, world);
   MPI_Bcast(&target[1], atom->nbondtypes, MPI_INT, 0, world);
+    // only bcast v if mode == 3  
+  if (mode[1] == 3) {
+    MPI_Bcast(&v[1], atom->nbondtypes, MPI_DOUBLE, 0, world);
+    MPI_Bcast(&beta[1], atom->nbondtypes, MPI_DOUBLE, 0, world);
+  }
 
   for (int i = 1; i <= atom->nbondtypes; i++) setflag[i] = 1;
 }
@@ -332,7 +365,12 @@ void BondHarmonicLearning::read_restart(FILE *fp)
 
 void BondHarmonicLearning::write_data(FILE *fp)
 {
-  for (int i = 1; i <= atom->nbondtypes; i++) fprintf(fp, "%d %.15g %.15g %.15g %.15g %.15g %.15g %d %d %d %d\n", i, k[i], r0[i], e_t[i], eta[i], alpha[i], vmin[i], train[i], mode[i], phase[i], target[i]);
+  if (mode[1] == 3) {
+    for (int i = 1; i <= atom->nbondtypes; i++) fprintf(fp, "%d %.15g %.15g %.15g %.15g %.15g %.15g %d %d %d %d %.15g %.15g\n", i, k[i], r0[i], e_t[i], eta[i], alpha[i], vmin[i], train[i], mode[i], phase[i], target[i], v[i], beta[i]);
+  }
+  else {
+    for (int i = 1; i <= atom->nbondtypes; i++) fprintf(fp, "%d %.15g %.15g %.15g %.15g %.15g %.15g %d %d %d %d\n", i, k[i], r0[i], e_t[i], eta[i], alpha[i], vmin[i], train[i], mode[i], phase[i], target[i]);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -376,5 +414,7 @@ void *BondHarmonicLearning::extract(const char *str, int &dim)
   if (strcmp(str, "mode") == 0) return (void *) mode;
   if (strcmp(str, "phase") == 0) return (void *) phase;
   if (strcmp(str, "target") == 0) return (void *) target;
+  if (strcmp(str, "v") == 0 && mode[1] == 3) return (void *) v;
+  if (strcmp(str, "beta") == 0 && mode[1] == 3) return (void *) beta;
   return nullptr;
 }
