@@ -2358,7 +2358,7 @@ class Allosteric(Elastic):
 					f.write('{:d} {:d} {:d} {:d}\n'.format(e+1,e+1,target['i']+1,target['j']+1))
 					e += 1
 
-	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, symmetric=False, dt=0.005):
+	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, symmetric=False, beta1=0.9, beta2=0.999, dt=0.005):
 		'''Write the datafile of atoms and bonds for a LAMMPS simulation with custom coupled learning routine.
 		
 		Parameters
@@ -2394,6 +2394,7 @@ class Allosteric(Elastic):
 		nt = len(ets[np.abs(ets) > 0])
 
 		if method == 'aging': mode = 1
+		elif method == 'adam': mode = 3
 		else: mode = 2
 
 		xmax = np.max(np.abs(self.pts[:,0]))
@@ -2423,8 +2424,14 @@ class Allosteric(Elastic):
 			f.write('1 1\n\n')
 
 			f.write('Bond Coeffs\n\n')
-			for e,edge in enumerate(self.graph.edges(data=True)):
-				f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,1,0))
+
+			if mode==3:
+				assert train==2, "Adam method only implemented for k-model."
+				for e,edge in enumerate(self.graph.edges(data=True)):
+					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d} {:.15g} {:.15g} {:.15g} {:.15g} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,1,0,0.0,0.0,beta1,beta2,1))
+			else:
+				for e,edge in enumerate(self.graph.edges(data=True)):
+					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,1,0))
 			e = self.ne		
 
 			for es, source in zip(ess, self.sources):
