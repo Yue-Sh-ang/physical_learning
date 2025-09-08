@@ -248,7 +248,7 @@ void BondHarmonicLearning::allocate()
 
 void BondHarmonicLearning::coeff(int narg, char **arg)
 {
-  if (narg != 11 && narg != 1) error->all(FLERR, "Incorrect args for bond coefficients");
+  if (narg != 11 && narg != 16) error->all(FLERR, "Incorrect args for bond coefficients");
 
   if (!allocated) allocate();
 
