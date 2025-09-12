@@ -2566,7 +2566,7 @@ class Allosteric(Elastic):
 			if method != None:
 				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
-	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005,seed=12):
+	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005,seed=12,WCA=False):
 		'''Write the input file for a LAMMPS simulation using write_data at each output frame.'''
 		with open(filename, 'w') as f:
 			f.write('units				lj\n')
@@ -2592,6 +2592,16 @@ class Allosteric(Elastic):
 					f.write('bond_style 		harmonic/learning/symmetric\n\n')
 				else:
 					f.write('bond_style 		harmonic/learning\n\n')
+			if WCA:
+				rmin=np.min([edge[2]['length'] for edge in self.graph.edges(data=True)])
+				f.write('pair_style		lj/cut 1.122462048309373\n')
+				f.write('pair_modify		shift yes\n')
+				f.write('variable        r0     equal {:.15g}\n'.format(rmin))
+				f.write('variable        dhard  equal 0.5*${r0}        # forbid closer than 0.5 r0\n')
+				f.write('variable        sigma  equal ${dhard}/1.122462048309373\n')
+				f.write('variable        eps    equal 1.0\n')
+				f.write('pair_coeff      * * ${eps} ${sigma} ${sigma}*1.122462048309373\n')
+				f.write('special_bonds   lj 1.0 1.0 1.0\n')
 
 			f.write('read_data			{:s}\n\n'.format(datafile))
 			if temp > 0:
@@ -2613,9 +2623,13 @@ class Allosteric(Elastic):
 
 			# Remove dump
 			# Add thermo
-			f.write('thermo_style    	custom step time temp press vol pe ke\n')
+			if WCA:
+				f.write('thermo_style    	custom step time temp press vol pe ke epair ebond\n')
+			else:
+				f.write('thermo_style    	custom step time temp press vol pe ke\n')
 			f.write('thermo          	${step}\n')
-			f.write('neigh_modify		once yes\n')
+			if not WCA:
+				f.write('neigh_modify		once yes\n')
 
 			# Add loop with write_data
 			f.write('variable i loop ${frames}\n')

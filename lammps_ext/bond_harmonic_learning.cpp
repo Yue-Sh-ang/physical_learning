@@ -177,14 +177,15 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
         k[type] += dk;
       }
 
-      if (mode[type] == 3) { // coupled learning with momentum
+      if (mode[type] == 3) { // coupled learning with memory (Adam)
         double G = (dr_f * dr_f - dr_c * dr_c);
         m[type] = beta1[type] * m[type] + (1 - beta1[type]) * G;
         v[type] = beta2[type] * v[type] + (1 - beta2[type]) * G * G;
         double mhat = m[type] / (1 - pow(beta1[type], t[type]));
         double vhat = v[type] / (1 - pow(beta2[type], t[type]));
-        dk = -alpha[type]/eta[type] * mhat / (sqrt(vhat) + 1e-8);
+        dk = alpha[type]/eta[type] * mhat / (sqrt(vhat) + 1e-8);
         k[type] += dk;
+        t[type] += 1;
       }
 
       if (mode[type] == 2) { // coupled learning //original version
