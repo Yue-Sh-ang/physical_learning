@@ -2358,7 +2358,7 @@ class Allosteric(Elastic):
 					f.write('{:d} {:d} {:d} {:d}\n'.format(e+1,e+1,target['i']+1,target['j']+1))
 					e += 1
 
-	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, symmetric=False, beta1=0.9, beta2=0.999, dt=0.005):
+	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, symmetric=False, beta1=0.9, beta2=0.999, dt=0.005,WCA=False):
 		'''Write the datafile of atoms and bonds for a LAMMPS simulation with custom coupled learning routine.
 		
 		Parameters
@@ -2411,7 +2411,7 @@ class Allosteric(Elastic):
 			f.write('0 angles\n')
 			f.write('0 dihedrals\n')
 			f.write('0 impropers\n\n')
-			
+
 			f.write('1 atom types\n')
 			f.write('{:d} bond types\n\n'.format(nb))
 
@@ -2452,7 +2452,10 @@ class Allosteric(Elastic):
 
 			f.write('Atoms\n\n')
 			for i in range(self.n):
-				f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.pts_c[i,0],self.pts_c[i,1],self.pts_c[i,2])) # clamped
+				if WCA:
+					f.write('{:d} 2 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.pts_c[i,0],self.pts_c[i,1],self.pts_c[i,2])) # clamped
+				else:
+					f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.pts_c[i,0],self.pts_c[i,1],self.pts_c[i,2])) # clamped
 				f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+2,self.pts[i,0],self.pts[i,1],self.pts[i,2])) # free
 				if symmetric:
 					f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+3,self.pts_sc[i,0],self.pts_sc[i,1],self.pts_sc[i,2])) # symmetric clamped
@@ -2592,18 +2595,20 @@ class Allosteric(Elastic):
 					f.write('bond_style 		harmonic/learning/symmetric\n\n')
 				else:
 					f.write('bond_style 		harmonic/learning\n\n')
+			f.write('read_data			{:s}\n\n'.format(datafile))
+			
 			if WCA:
 				rmin=np.min([edge[2]['length'] for edge in self.graph.edges(data=True)])
-				f.write('pair_style		lj/cut 1.122462048309373\n')
-				f.write('pair_modify		shift yes\n')
-				f.write('variable        r0     equal {:.15g}\n'.format(rmin))
-				f.write('variable        dhard  equal 0.5*${r0}        # forbid closer than 0.5 r0\n')
-				f.write('variable        sigma  equal ${dhard}/1.122462048309373\n')
-				f.write('variable        eps    equal 1.0\n')
-				f.write('pair_coeff      * * ${eps} ${sigma} ${sigma}*1.122462048309373\n')
-				f.write('special_bonds   lj 1.0 1.0 1.0\n')
+				f.write('variable r0     equal {:.15g}\n'.format(rmin))
+				f.write('variable frac   equal 0.5                          # forbid < 0.5 r0\n')
+				f.write('variable sigma  equal ${frac}*${r0}/1.122462048309373\n')
+				f.write('variable rc     equal ${sigma}*1.122462048309373    # rc = 2^(1/6)*sigma\n')
+				f.write('variable eps    equal 1.0\n')
 
-			f.write('read_data			{:s}\n\n'.format(datafile))
+				f.write('pair_style      lj/cut ${rc}        # global cutoff ≥ max per-type cutoff\n')
+				f.write('pair_modify     shift yes            # set energy to 0 at rc (WCA form)  # :contentReference[oaicite:1]{index=1}\n')
+				f.write('pair_coeff      * * ${eps} ${sigma} ${rc}\n')
+				
 			if temp > 0:
 				f.write('velocity			all create {:.15g} {:d} dist gaussian mom yes rot yes sum no\n\n'.format(temp, seed))
 
@@ -2630,6 +2635,8 @@ class Allosteric(Elastic):
 			f.write('thermo          	${step}\n')
 			if not WCA:
 				f.write('neigh_modify		once yes\n')
+			else:
+				f.write('neigh_modify exclude molecule all\n')
 
 			# Add loop with write_data
 			f.write('variable i loop ${frames}\n')

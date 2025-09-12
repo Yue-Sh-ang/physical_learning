@@ -347,7 +347,7 @@ def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, 
 	if train:
 		allo.write_lammps_data_learning(odir+datafile, 'Allosteric network', applied_args,
 										train=train, method=method, eta=eta, alpha=alpha, vmin=vmin,
-										symmetric=symmetric, beta1=beta1, beta2=beta2, dt=dt)
+										symmetric=symmetric, beta1=beta1, beta2=beta2, dt=dt,WCA=WCA)
 	else:
 		allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
 	allo.write_lammps_input_new(odir+infile, datafile, dumpfile, duration, frames, temp=temp, method=method, symmetric=symmetric, dt=dt,seed=seed,WCA=WCA)
