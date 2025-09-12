@@ -2637,7 +2637,7 @@ class Allosteric(Elastic):
 				f.write('neigh_modify		once yes\n')
 			else:
 				f.write('neigh_modify exclude molecule/inter all\n')
-				f.write('neigh_modify comm_modify cutoff 0.05\n')
+				f.write('comm_modify cutoff 0.05\n')
 				f.write('neigh_modify binsize 0.02\n')
 				f.write('atom_modify sort 0 0.0\n')
 
