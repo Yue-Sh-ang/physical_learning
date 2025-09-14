@@ -294,7 +294,7 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 	print("LAMMPS simulation set up in directory: {:s}".format(odir))
 
 
-def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, symmetric=False,dt=0.005, hours=24,seed=12,beta1=0.9, beta2=0.999,WCA=False):
+def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, symmetric=False,dt=0.005, hours=24,seed=12,beta1=0.9, beta2=0.999,WCA=False,DOC=True):
 	'''Set up a complete LAMMPS simulation in a directory.
 	   
 	Parameters
@@ -350,7 +350,7 @@ def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, 
 										symmetric=symmetric, beta1=beta1, beta2=beta2, dt=dt,WCA=WCA)
 	else:
 		allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
-	allo.write_lammps_input_new(odir+infile, datafile, dumpfile, duration, frames, temp=temp, method=method, symmetric=symmetric, dt=dt,seed=seed,WCA=WCA)
+	allo.write_lammps_input_new(odir+infile, datafile, dumpfile, duration, frames, temp=temp, method=method, symmetric=symmetric, dt=dt,seed=seed,WCA=WCA,DOC=DOC)
 	allo.save(odir+'allo.txt') # do this last, because it resets init!!
 
 	cmd = lmp_path+' -i '+infile+' -log '+logfile

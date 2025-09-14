@@ -2569,7 +2569,7 @@ class Allosteric(Elastic):
 			if method != None:
 				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
 
-	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005,seed=12,WCA=False):
+	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005,seed=12,WCA=False,DOC=True):
 		'''Write the input file for a LAMMPS simulation using write_data at each output frame.'''
 		with open(filename, 'w') as f:
 			f.write('units				lj\n')
@@ -2645,7 +2645,9 @@ class Allosteric(Elastic):
 			f.write('variable i loop ${frames}\n')
 			f.write('label loop_start\n')
 			f.write('run ${step}\n')
-			f.write('write_data step${i}.bond\n')  # wildcard * inserts current timestep
+			if DOC == True:
+				f.write('write_data step${i}.bond\n')  # wildcard * inserts current timestep
+			
 			f.write('next i\n')
 			f.write('jump SELF loop_start\n')
 
