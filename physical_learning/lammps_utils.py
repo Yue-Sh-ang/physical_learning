@@ -463,20 +463,25 @@ def load_frame(odir, frame=200,train=True):
 	return allo
 
 
-def get_traj(odir,nframes=200):
+def get_traj(odir,nframes=200,train=True):
 	for i in range(1,nframes+1):
-		allo = load_frame(odir, frame=i)
+		allo = load_frame(odir, frame=i,train=train)
 		stiffness = np.array([edge[2]['stiffness'] for edge in allo.graph.edges(data=True)])
 		
-
+		
 		if i == 1:
 			r_traj = np.copy(allo.pts)
-			rc_traj = np.copy(allo.pts_c)
-			k_traj = np.copy(stiffness)
+			if train:
+				rc_traj = np.copy(allo.pts_c)
+				k_traj = np.copy(stiffness)
+			else:
+				rc_traj = None
+				k_traj = None
 		else:
 			r_traj = np.concatenate((r_traj, allo.pts), axis=0)
-			rc_traj = np.concatenate((rc_traj, allo.pts_c), axis=0)
-			k_traj = np.concatenate((k_traj, stiffness), axis=0)
+			if train:
+				rc_traj = np.concatenate((rc_traj, allo.pts_c), axis=0)
+				k_traj = np.concatenate((k_traj, stiffness), axis=0)
 
 	return r_traj, rc_traj, k_traj
 
