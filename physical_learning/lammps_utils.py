@@ -198,7 +198,7 @@ def read_data_new(filename, allo,train):
 			allo.pts[i,0] = x
 			allo.pts[i,1] = y
 			allo.pts[i,2] = z
-            if train:
+			if train:
 				line = f.readline()
 				id,_,_, xc, yc, zc,_,_,_ = np.array(line.strip().split())[:9].astype(float)
 				allo.pts_c[i,0] = xc
