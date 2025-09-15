@@ -163,7 +163,7 @@ def read_data(filename, graph):
 			edge[2]['stiffness'] = k
 			edge[2]['length'] = l
 
-def read_data_new(filename, allo):
+def read_data_new(filename, allo,train):
 	'''Read a LAMMPS data file and update a graph based on its contents.
 
 	The bond stiffnesses and rest lengths are set based on the datafile specifications.
@@ -198,12 +198,12 @@ def read_data_new(filename, allo):
 			allo.pts[i,0] = x
 			allo.pts[i,1] = y
 			allo.pts[i,2] = z
-
-			line = f.readline()
-			id,_,_, xc, yc, zc,_,_,_ = np.array(line.strip().split())[:9].astype(float)
-			allo.pts_c[i,0] = xc
-			allo.pts_c[i,1] = yc
-			allo.pts_c[i,2] = zc
+            if train:
+				line = f.readline()
+				id,_,_, xc, yc, zc,_,_,_ = np.array(line.strip().split())[:9].astype(float)
+				allo.pts_c[i,0] = xc
+				allo.pts_c[i,1] = yc
+				allo.pts_c[i,2] = zc
 
 def read_dim(filename):
 	'''Read a LAMMPS input file to parse out the dimension.
@@ -448,7 +448,7 @@ def load_run(odir, history=True):
 		dist, engpot = read_dump_bondinfo(os.path.join(odir, 'bondinfo.dump'))
 		return allo, data, cols, dist, engpot
 
-def load_frame(odir, frame=200):
+def load_frame(odir, frame=200,train=True):
 	if odir[-1] != '/' : odir += '/'
 	netfile = glob.glob(odir+'*.txt')[0]
 	datafile = glob.glob(odir+f'step{frame:d}.bond')[0]
@@ -459,7 +459,7 @@ def load_frame(odir, frame=200):
 	dim = read_dim(infile)
 	if dim != allo.dim:
 		raise ValueError("Dimension mismatch between LAMMPS simulation (d={:d}) and network file (d={:d}).".format(dim,allo.dim))
-	read_data_new(datafile, allo)
+	read_data_new(datafile, allo,train)
 	return allo
 
 
