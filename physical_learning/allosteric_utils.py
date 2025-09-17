@@ -2394,7 +2394,8 @@ class Allosteric(Elastic):
 		if method == 'aging': mode = 1
 		elif method == 'adam': mode = 3
 		elif method == 'momentum': mode = 4
-		else: mode = 2
+		elif method == 'learning': mode = 2
+		else: raise ValueError("method must be 'aging', 'learning', 'adam', or 'momentum'.")
 
 		xmax = np.max(np.abs(self.pts[:,0]))
 		ymax = np.max(np.abs(self.pts[:,1]))
