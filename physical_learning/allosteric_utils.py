@@ -2393,6 +2393,7 @@ class Allosteric(Elastic):
 
 		if method == 'aging': mode = 1
 		elif method == 'adam': mode = 3
+		elif method == 'momentum': mode = 4
 		else: mode = 2
 
 		xmax = np.max(np.abs(self.pts[:,0]))
