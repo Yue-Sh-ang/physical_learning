@@ -224,7 +224,8 @@ def read_dim(filename):
 			line = f.readline()
 	return int(line.strip().split()[1])
 
-def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, symmetric=False,doc_bond=False, dt=0.005, hours=24,seed=12):
+
+def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, dt=0.005, hours=24,seed=12,beta1=0.9, beta2=0.999,WCA=False,DOC=True,Twin=False):
 	'''Set up a complete LAMMPS simulation in a directory.
 	   
 	Parameters
@@ -255,8 +256,6 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 		The smallest allowed value for each learning degree of freedom.
 	temp : float, optional
 		The temperature setting, in LJ units. If zero (default), an athermal simulation is performed.
-	symmetric : bool, optional
-		Whether to introduce a symmetric state for training with a different set of boundary conditions. Default is False.
 	dt : float, optional
 		Integration step size.
 	hours : int, optional
@@ -266,7 +265,6 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 
 	datafile = prefix+'.data'
 	infile = prefix+'.in'
-	dumpfile = prefix+'.dump'
 	logfile = prefix+'.log'
 	jobfile = 'job.sh'
 
@@ -277,80 +275,12 @@ def setup_run(allo, odir, prefix, lmp_path, duration, frames, applied_args, trai
 	if train:
 		allo.write_lammps_data_learning(odir+datafile, 'Allosteric network', applied_args,
 										train=train, method=method, eta=eta, alpha=alpha, vmin=vmin,
-										symmetric=symmetric, dt=dt)
+										beta1=beta1, beta2=beta2, dt=dt,WCA=WCA)
 	else:
 		allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
-	allo.write_lammps_input(odir+infile, datafile, dumpfile, duration, frames, temp=temp, method=method, symmetric=symmetric,doc_bond=doc_bond, dt=dt,seed=seed)
-	allo.save(odir+'allo.txt') # do this last, because it resets init!!
 
-	cmd = lmp_path+' -i '+infile+' -log '+logfile
-
-	allo.write_job(odir+jobfile, prefix+'_test', hours, cmd)
-	# submit job together
-	with open('tasks.sh', 'a') as f:
-		f.write(f"cd {odir}\n")
-		f.write(f"sbatch ./{jobfile}\n")
 	
-	print("LAMMPS simulation set up in directory: {:s}".format(odir))
-
-
-def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, symmetric=False,dt=0.005, hours=24,seed=12,beta1=0.9, beta2=0.999,WCA=False,DOC=True):
-	'''Set up a complete LAMMPS simulation in a directory.
-	   
-	Parameters
-	----------
-	allo : Allosteric
-		The Allosteric object to simulate.
-	odir : str
-		The path to the directory.
-	prefix : str
-		The file prefix to use for data, input, dump, and logfiles.
-	lmp_path : str
-		The path to the LAMMPS executable.
-	duration : float
-		The final integration time.
-	frames : int
-		The number of output frames to produce (excluding initial frame).
-	applied_args : tuple
-		Simulation arguments: the source strain(s), target strain(s), and pinning stiffness.
-	train : int, optional
-		Training mode. 0 = no training, 1 = l-model, 2 = k-model.
-	method : str, optional
-		Training method to use. Options are 'aging' or 'learning'.
-	eta : float, optional
-		The learning rate by which the clamped state target strain approaches the final desired strain.
-	alpha : float, optional
-		The aging rate.
-	vmin : float, optional
-		The smallest allowed value for each learning degree of freedom.
-	temp : float, optional
-		The temperature setting, in LJ units. If zero (default), an athermal simulation is performed.
-	symmetric : bool, optional
-		Whether to introduce a symmetric state for training with a different set of boundary conditions. Default is False.
-	dt : float, optional
-		Integration step size.
-	hours : int, optional
-		The number of hours to allocate for the job.
-	'''
-	
-
-	datafile = prefix+'.data'
-	infile = prefix+'.in'
-	dumpfile = prefix+'.dump'
-	logfile = prefix+'.log'
-	jobfile = 'job.sh'
-
-	if odir[-1] != '/' : odir += '/'
-	if not os.path.exists(odir):
-		os.makedirs(odir)
-
-	if train:
-		allo.write_lammps_data_learning(odir+datafile, 'Allosteric network', applied_args,
-										train=train, method=method, eta=eta, alpha=alpha, vmin=vmin,
-										symmetric=symmetric, beta1=beta1, beta2=beta2, dt=dt,WCA=WCA)
-	else:
-		allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
-	allo.write_lammps_input_new(odir+infile, datafile, dumpfile, duration, frames, temp=temp, method=method, symmetric=symmetric, dt=dt,seed=seed,WCA=WCA,DOC=DOC)
+	allo.write_lammps_input_new(odir+infile, datafile, duration, frames, temp=temp, method=method,dt=dt,seed=seed,WCA=WCA,DOC=DOC,Twin=Twin)
 	allo.save(odir+'allo.txt') # do this last, because it resets init!!
 
 	cmd = lmp_path+' -i '+infile+' -log '+logfile
@@ -363,90 +293,6 @@ def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, 
 	print("LAMMPS simulation with Bond Info set up in directory: {:s}".format(odir))
 
 
-def load_run(odir, history=True):
-	'''Load a complete LAMMPS simulation from its directory.
-
-	The directory should contain an Allosteric network file, LAMMPS datafile,
-	dumpfile, and logfile.
-
-	Parameters
-	----------
-	odir : str
-		The path to the directory.
-	just_allo : bool, optional
-		If True, only load the Allosteric object without the simulation history.
-
-	Returns
-	-------
-	allo : Allosteric
-		Allosteric Class object with network set up according to provided LAMMPS datafile,
-		with simulation history loaded from dumpfile (if present).
-	'''
-
-	# collect all filenames
-	if odir[-1] != '/' : odir += '/'
-	netfile = glob.glob(odir+'*.txt')[0]
-	datafile = glob.glob(odir+'*.data')[0]
-	infile = glob.glob(odir+'*.in')[0]
-	logfile = glob.glob(odir+'*.log')[0]
-
-	dumpfiles = glob.glob(os.path.join(odir, '*.dump'))
-
-	# Separate bondinfo.dump and other dumps
-	has_bondinfo = any(os.path.basename(f) == 'bondinfo.dump' for f in dumpfiles)
-	other_dumps = [f for f in dumpfiles if os.path.basename(f) != 'bondinfo.dump']
-	has_other_dump = len(other_dumps) > 0
-
-	if has_other_dump:
-		dumpfile = other_dumps[0]
-
-	allo = Allosteric(netfile)
-	dim = read_dim(infile)
-	if dim != allo.dim:
-		raise ValueError("Dimension mismatch between LAMMPS simulation (d={:d}) and network file (d={:d}).".format(dim,allo.dim))
-	read_data(datafile, allo.graph)
-	
-	if not has_other_dump or history==False:
-		return allo, None, None,None,None
-
-	
-	data, cols = read_log(logfile)
-	if 'Time' in cols:
-		allo.t_eval = data[:, cols.index('Time')]
-
-	traj, vtraj = read_dump(dumpfile)
-	if traj.shape[1] == allo.n: # free state only
-		allo.traj = np.copy(traj)
-		allo.vtraj = np.copy(vtraj)
-		allo.traj_c = np.copy(traj)
-		allo.vtraj_c = np.copy(vtraj)
-		allo.traj_s = np.copy(traj)
-		allo.vtraj_s = np.copy(vtraj)
-		allo.traj_sc = np.copy(traj)
-		allo.vtraj_sc = np.copy(vtraj)
-	elif traj.shape[1] == 2*allo.n: # free and clamped states
-		allo.traj = np.copy(traj[:,1::2,:])
-		allo.vtraj = np.copy(vtraj[:,1::2,:])
-		allo.traj_c = np.copy(traj[:,::2,:])
-		allo.vtraj_c = np.copy(vtraj[:,::2,:])
-		allo.traj_s = np.copy(traj[:,1::2,:])
-		allo.vtraj_s = np.copy(vtraj[:,1::2,:])
-		allo.traj_sc = np.copy(traj[:,::2,:])
-		allo.vtraj_sc = np.copy(vtraj[:,::2,:])
-	else: # symmetric free and clamped states
-		allo.traj = np.copy(traj[:,1::4,:])
-		allo.vtraj = np.copy(vtraj[:,1::4,:])
-		allo.traj_c = np.copy(traj[:,::4,:])
-		allo.vtraj_c = np.copy(vtraj[:,::4,:])
-		allo.traj_s = np.copy(traj[:,3::4,:])
-		allo.vtraj_s = np.copy(vtraj[:,3::4,:])
-		allo.traj_sc = np.copy(traj[:,2::4,:])
-		allo.vtraj_sc = np.copy(vtraj[:,2::4,:])
-	if not has_bondinfo:
-		return allo, data, cols, None, None
-	if has_bondinfo:
-		dist, engpot = read_dump_bondinfo(os.path.join(odir, 'bondinfo.dump'))
-		return allo, data, cols, dist, engpot
 
 def load_frame(odir, frame=200,train=True):
 	if odir[-1] != '/' : odir += '/'

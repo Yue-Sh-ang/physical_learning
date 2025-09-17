@@ -177,7 +177,7 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
         k[type] += dk;
       }
 
-      if (mode[type] == 3) { // coupled learning with memory (Adam)
+      if (mode[type] == 3) { // coupled learning with momentum
         double G = (dr_f * dr_f - dr_c * dr_c);
         m[type] = beta1[type] * m[type] + (1 - beta1[type]) * G;
         v[type] = beta2[type] * v[type] + (1 - beta2[type]) * G * G;
@@ -185,11 +185,17 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
         double vhat = v[type] / (1 - pow(beta2[type], t[type]));
         dk = alpha[type]/eta[type] * mhat / (sqrt(vhat) + 1e-8);
         k[type] += dk;
-        t[type] += 1;
+      	t[type] += 1;
       }
 
+      if (mode[type] == 4) { // SGD with momentum
+        double G = (dr_f * dr_f - dr_c * dr_c);
+        m[type] = beta1[type] * m[type] + (1 - beta1[type]) * G;
+        dk = alpha[type]/eta[type] * m[type];
+        k[type] += dk;
+      }
       
-      if (mode[type] == 2) { // coupled learning //original version
+      if (mode[type] == 2) { // coupled learning SGD
         dk = alpha[type]/eta[type] * (dr_f * dr_f - dr_c * dr_c);
         k[type] += dk;
       }
@@ -330,7 +336,7 @@ void BondHarmonicLearning::write_restart(FILE *fp)
   fwrite(&mode[1], sizeof(int), atom->nbondtypes, fp);
   fwrite(&phase[1], sizeof(int), atom->nbondtypes, fp);
   fwrite(&target[1], sizeof(int), atom->nbondtypes, fp);
-  if (mode[1] == 3) {
+  if (mode[1] == 3 or mode[1] == 4) {
     fwrite(&m[1], sizeof(double), atom->nbondtypes, fp);
     fwrite(&v[1], sizeof(double), atom->nbondtypes, fp);
     fwrite(&beta1[1], sizeof(double), atom->nbondtypes, fp);
@@ -359,7 +365,7 @@ void BondHarmonicLearning::read_restart(FILE *fp)
     utils::sfread(FLERR, &phase[1], sizeof(int), atom->nbondtypes, fp, nullptr, error);
     utils::sfread(FLERR, &target[1], sizeof(int), atom->nbondtypes, fp, nullptr, error);
      // only read v if mode == 3
-    if (mode[1] == 3) {
+    if (mode[1] == 3 or mode[1] == 4) {
       utils::sfread(FLERR, &m[1], sizeof(double), atom->nbondtypes, fp, nullptr, error);
       utils::sfread(FLERR, &v[1], sizeof(double), atom->nbondtypes, fp, nullptr, error);
       utils::sfread(FLERR, &beta1[1], sizeof(double), atom->nbondtypes, fp, nullptr, error);
@@ -377,8 +383,8 @@ void BondHarmonicLearning::read_restart(FILE *fp)
   MPI_Bcast(&mode[1], atom->nbondtypes, MPI_INT, 0, world);
   MPI_Bcast(&phase[1], atom->nbondtypes, MPI_INT, 0, world);
   MPI_Bcast(&target[1], atom->nbondtypes, MPI_INT, 0, world);
-    // only bcast v if mode == 3  
-  if (mode[1] == 3) {
+    // only bcast v if mode == 3  or 4
+  if (mode[1] == 3 or mode[1] == 4) {
     MPI_Bcast(&m[1], atom->nbondtypes, MPI_DOUBLE, 0, world);
     MPI_Bcast(&v[1], atom->nbondtypes, MPI_DOUBLE, 0, world);
     MPI_Bcast(&beta1[1], atom->nbondtypes, MPI_DOUBLE, 0, world);
@@ -395,7 +401,7 @@ void BondHarmonicLearning::read_restart(FILE *fp)
 
 void BondHarmonicLearning::write_data(FILE *fp)
 {
-  if (mode[1] == 3) {
+  if (mode[1] == 3 or mode[1] == 4) {
     for (int i = 1; i <= atom->nbondtypes; i++) fprintf(fp, "%d %.15g %.15g %.15g %.15g %.15g %.15g %d %d %d %d %.15g %.15g %.15g %.15g %d\n", i, k[i], r0[i], e_t[i], eta[i], alpha[i], vmin[i], train[i], mode[i], phase[i], target[i], m[i], v[i], beta1[i], beta2[i], t[i]);
   }
   else {
@@ -444,10 +450,10 @@ void *BondHarmonicLearning::extract(const char *str, int &dim)
   if (strcmp(str, "mode") == 0) return (void *) mode;
   if (strcmp(str, "phase") == 0) return (void *) phase;
   if (strcmp(str, "target") == 0) return (void *) target;
-  if (strcmp(str, "m") == 0 && mode[1] == 3) return (void *) m;
-  if (strcmp(str, "v") == 0 && mode[1] == 3) return (void *) v;
-  if (strcmp(str, "beta1") == 0 && mode[1] == 3) return (void *) beta1;
-  if (strcmp(str, "beta2") == 0 && mode[1] == 3) return (void *) beta2;
-  if (strcmp(str, "t") == 0 && mode[1] == 3) return (void *) t;
+  if (strcmp(str, "m") == 0 && (mode[1] == 3 or mode[1] == 4)) return (void *) m;
+  if (strcmp(str, "v") == 0 && (mode[1] == 3 or mode[1] == 4)) return (void *) v;
+  if (strcmp(str, "beta1") == 0 && (mode[1] == 3 or mode[1] == 4)) return (void *) beta1;
+  if (strcmp(str, "beta2") == 0 && (mode[1] == 3 or mode[1] == 4)) return (void *) beta2;
+  if (strcmp(str, "t") == 0 && (mode[1] == 3 or mode[1] == 4)) return (void *) t;
   return nullptr;
 }

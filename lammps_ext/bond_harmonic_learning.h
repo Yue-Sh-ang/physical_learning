@@ -40,8 +40,7 @@ class BondHarmonicLearning : public Bond {
 
  protected:
   double *k,*r0, *e_t, *eta, *alpha, *vmin,*v,*m, *beta1,*beta2; // stiffness, rest length, target strain, learning rates, minimum value for dof
-  
-  //update: v,m,beta1,beta2,t for adam
+                                                               //update: v,m,beta1,beta2,t for adam
   int *train, *mode, *phase, *target,*t; // train trainable bond indicator, training mode, phase, target bond indicator
 
   virtual void allocate();

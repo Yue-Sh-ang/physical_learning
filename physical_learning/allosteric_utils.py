@@ -2358,7 +2358,7 @@ class Allosteric(Elastic):
 					f.write('{:d} {:d} {:d} {:d}\n'.format(e+1,e+1,target['i']+1,target['j']+1))
 					e += 1
 
-	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, symmetric=False, beta1=0.9, beta2=0.999, dt=0.005,WCA=False):
+	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, beta1=0.9, beta2=0.999, dt=0.005,WCA=False):
 		'''Write the datafile of atoms and bonds for a LAMMPS simulation with custom coupled learning routine.
 		
 		Parameters
@@ -2379,9 +2379,7 @@ class Allosteric(Elastic):
 			The aging rate.
 		vmin : float, optional
 			The smallest allowed value for each learning degree of freedom.
-		symmetric : bool, optional
-			Whether to introduce a symmetric state for training with a different set of boundary conditions. Default is False.
-		dt : float, optional
+			dt : float, optional
 			Integration step size.
 		'''
 
@@ -2405,7 +2403,7 @@ class Allosteric(Elastic):
 			f.write('{:s}\n\n'.format(title))
 
 			nb = self.ne + ns + nt
-			na = (2+2*int(symmetric))
+			na = 2
 			f.write('{:d} atoms\n'.format(na*self.n))
 			f.write('{:d} bonds\n'.format(nb))
 			f.write('0 angles\n')
@@ -2425,8 +2423,8 @@ class Allosteric(Elastic):
 
 			f.write('Bond Coeffs\n\n')
 
-			if mode==3:
-				assert train==2, "Adam method only implemented for k-model."
+			if mode==3 or mode==4:
+				assert train==2, "method with memory only implemented for k-model."
 				for e,edge in enumerate(self.graph.edges(data=True)):
 					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d} {:.15g} {:.15g} {:.15g} {:.15g} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,1,0,0.0,0.0,beta1,beta2,1))
 			else:
@@ -2436,12 +2434,8 @@ class Allosteric(Elastic):
 
 			for es, source in zip(ess, self.sources):
 				if np.abs(es) > 0:
-					if symmetric:
-						rs = source['length']
-						f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*ka,rs,es,eta,alpha*dt,0.5*vmin,0,0,source['phase'],2))
-					else:
-						rs = source['length']*(1 + source['phase']*es)
-						f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*ka,rs,0,eta,alpha*dt,0.5*vmin,0,0,source['phase'],0))
+					rs = source['length']*(1 + source['phase']*es)
+					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*ka,rs,0,eta,alpha*dt,0.5*vmin,0,0,source['phase'],0))
 					e += 1
 			for et, target in zip(ets, self.targets):
 				if np.abs(et) > 0:
@@ -2450,25 +2444,18 @@ class Allosteric(Elastic):
 					e += 1
 			f.write('\n')
 
-			f.write('Atoms\n\n')
-			for i in range(self.n):
-				if WCA:
-					f.write('{:d} 2 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.pts_c[i,0],self.pts_c[i,1],self.pts_c[i,2])) # clamped
-				else:
-					f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.pts_c[i,0],self.pts_c[i,1],self.pts_c[i,2])) # clamped
+			f.write('Atoms\n\n')#clamped and free belong to different "molecules", which is good to distiguish them
+			for i in range(self.n):				
+				f.write('{:d} 2 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.pts_c[i,0],self.pts_c[i,1],self.pts_c[i,2])) # clamped
 				f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+2,self.pts[i,0],self.pts[i,1],self.pts[i,2])) # free
-				if symmetric:
-					f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+3,self.pts_sc[i,0],self.pts_sc[i,1],self.pts_sc[i,2])) # symmetric clamped
-					f.write('{:d} 1 1 {:.15g} {:.15g} {:.15g}\n'.format(na*i+4,self.pts_s[i,0],self.pts_s[i,1],self.pts_s[i,2])) # symmetric free
+			
 			f.write('\n')
 
 			f.write('Velocities\n\n')
 			for i in range(self.n):
 				f.write('{:d} {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.vel_c[i,0],self.vel_c[i,1],self.vel_c[i,2])) # clamped
 				f.write('{:d} {:.15g} {:.15g} {:.15g}\n'.format(na*i+2,self.vel[i,0],self.vel[i,1],self.vel[i,2])) # free
-				if symmetric:
-					f.write('{:d} {:.15g} {:.15g} {:.15g}\n'.format(na*i+1,self.vel_sc[i,0],self.vel_sc[i,1],self.vel_sc[i,2])) # symmetric clamped
-					f.write('{:d} {:.15g} {:.15g} {:.15g}\n'.format(na*i+2,self.vel_s[i,0],self.vel_s[i,1],self.vel_s[i,2])) # symmetric free
+				
 			f.write('\n')
 
 			f.write('Bonds\n\n')
@@ -2484,92 +2471,7 @@ class Allosteric(Elastic):
 					f.write('{:d} {:d} {:d} {:d}\n'.format(e+1,e+1,na*target['i']+1,na*target['j']+1))
 					e += 1
 
-	def write_lammps_input(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False,doc_bond=False, dt=0.005,seed=12):
-		'''Write the input file for a LAMMPS simulation.
-		
-		Parameters
-		----------
-		filename : str
-			The name of the file to write to.
-		datafile : str
-			The name of the datafile input, which will be overwritten on output. If path is included,
-			must be relative to filename.
-		dumpfile : str
-			The name of the LAMMPS dumpfile for outputting node positions. If path is included, must
-			be relative to filename.
-		duration : float
-			The final integration time.
-		frames : int
-			The number of output frames to produce (excluding initial frame).
-		temp : float, optional
-			The temperature setting, in LJ units. If zero (default), an athermal simulation is performed.
-		method : str, optional
-			The type of simulation to run. If left as default (None), bonds are not trainable and have no
-			applied dashpots. Valid options are 'aging' or 'learning'.
-		symmetric : bool, optional
-			Whether to introduce a symmetric state for training with a different set of boundary conditions. Default is False.
-		dt : float, optional
-			Integration step size.
-		'''
-
-		with open(filename, 'w') as f:
-			f.write('units				lj\n')
-			f.write('timestep			{:.15g}\n'.format(dt))
-			f.write('dimension			{:d}\n'.format(self.dim))
-			f.write('atom_style			bond\n')
-
-			if temp == 0:
-				if self.dim == 2:
-					f.write('boundary			f f p\n')
-				else:
-					f.write('boundary			f f f\n')
-			else:
-				if self.dim == 2:
-					f.write('boundary			s s p\n')
-				else:
-					f.write('boundary			s s s\n')
-
-			if method == None:
-				f.write('bond_style 		harmonic\n\n')
-			else:
-				if symmetric:
-					f.write('bond_style 		harmonic/learning/symmetric\n\n')
-				else:
-					f.write('bond_style 		harmonic/learning\n\n')
-
-			f.write('read_data			{:s}\n\n'.format(datafile))
-			if temp > 0:
-				f.write('velocity			all create {:.15g} {:d} dist gaussian mom yes rot yes sum no\n\n'.format(temp, seed))
-
-			f.write('variable 			duration equal {:12g}/dt\n'.format(duration))
-			f.write('variable			frames equal {:d}\n'.format(frames))
-			f.write('variable			step equal ${duration}/${frames}\n')
-			if doc_bond:
-				f.write('compute                         1 all bond/local dist engpot\n')
-			if temp > 0:
-				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp,temp,seed))
-				f.write('fix				intgr all nve\n')
-				#f.write('fix				therm all nvt temp {:.15g} {:.15g} $(100.0*dt)\n'.format(temp,temp))
-			
-			if temp == 0:
-				f.write('fix				intgr all nve\n')
-				f.write('fix			drag all viscous 2\n')
-			if self.dim == 2:
-				f.write('fix				dim all enforce2d\n')
-
-			f.write('dump				out all custom ${step}'+' {:s} x y z vx vy vz\n'.format(dumpfile))
-			f.write('dump_modify		out format line "%.15g %.15g %.15g %.15g %.15g %.15g"\n')
-			if doc_bond:
-				f.write('dump                            bondinfo all local ${step} bondinfo.dump index c_1[*]\n')
-			f.write('thermo_style    	custom step time temp press vol pe ke\n')
-			f.write('thermo          	${step}\n')
-			f.write('neigh_modify		once yes\n')
-			f.write('run				${duration}\n')
-
-			if method != None:
-				f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
-
-	def write_lammps_input_new(self, filename, datafile, dumpfile, duration, frames, temp=0, method=None, symmetric=False, dt=0.005,seed=12,WCA=False,DOC=True):
+	def write_lammps_input_new(self, filename, datafile, duration, frames, temp=0, method=None,  dt=0.005,seed=12,WCA=False,DOC=True,Twin=False):
 		'''Write the input file for a LAMMPS simulation using write_data at each output frame.'''
 		with open(filename, 'w') as f:
 			f.write('units				lj\n')
@@ -2591,10 +2493,7 @@ class Allosteric(Elastic):
 			if method is None:
 				f.write('bond_style 		harmonic\n\n')
 			else:
-				if symmetric:
-					f.write('bond_style 		harmonic/learning/symmetric\n\n')
-				else:
-					f.write('bond_style 		harmonic/learning\n\n')
+				f.write('bond_style 		harmonic/learning\n\n')
 			f.write('read_data			{:s}\n\n'.format(datafile))
 			
 			if WCA:
@@ -2617,7 +2516,13 @@ class Allosteric(Elastic):
 			f.write('variable			step equal ${duration}/${frames}\n')
 			
 			if temp > 0:
-				f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+				if Twin==True: #if you want they have the same noise spectrum
+					f.write('group clamped molecule 1\n')
+					f.write('group free molecule 2\n')
+					f.write('fix				therm free langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+					f.write('fix				therm clamped langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+				else:
+					f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
 				f.write('fix				intgr all nve\n')
 
 			if temp == 0:
@@ -2626,8 +2531,7 @@ class Allosteric(Elastic):
 			if self.dim == 2:
 				f.write('fix				dim all enforce2d\n')
 
-			# Remove dump
-			# Add thermo
+		
 			if WCA:
 				f.write('thermo_style    	custom step time temp press vol pe ke epair ebond\n')
 			else:
