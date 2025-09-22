@@ -2358,7 +2358,7 @@ class Allosteric(Elastic):
 					f.write('{:d} {:d} {:d} {:d}\n'.format(e+1,e+1,target['i']+1,target['j']+1))
 					e += 1
 
-	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, beta1=0.9, beta2=0.999, dt=0.005,WCA=False):
+	def write_lammps_data_learning(self, filename, title, applied_args, train=2, method='learning', eta=1e-1, alpha=1e-3, vmin=1e-3, beta1=0.9, beta2=0.999, dt=0.005,WCA=False,phase=1):
 		'''Write the datafile of atoms and bonds for a LAMMPS simulation with custom coupled learning routine.
 		
 		Parameters
@@ -2426,23 +2426,23 @@ class Allosteric(Elastic):
 			f.write('Bond Coeffs\n\n')
 
 			if mode==3 or mode==4:
-				assert train==2, "method with memory only implemented for k-model."
+				
 				for e,edge in enumerate(self.graph.edges(data=True)):
-					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d} {:.15g} {:.15g} {:.15g} {:.15g} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,1,0,0.0,0.0,beta1,beta2,1))
+					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d} {:.15g} {:.15g} {:.15g} {:.15g} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,phase,0,0.0,0.0,beta1,beta2,1))
 			else:
 				for e,edge in enumerate(self.graph.edges(data=True)):
-					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,1,0))
+					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*edge[2]['stiffness'],edge[2]['length'],0,eta,alpha*dt,0.5*vmin,train*int(edge[2]['trainable']),mode,phase,0))
 			e = self.ne		
 
 			for es, source in zip(ess, self.sources):
 				if np.abs(es) > 0:
 					rs = source['length']*(1 + source['phase']*es)
-					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*ka,rs,0,eta,alpha*dt,0.5*vmin,0,0,source['phase'],0))
+					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*ka,rs,0,eta,alpha*dt,0.5*vmin,0,0,phase,0))
 					e += 1
 			for et, target in zip(ets, self.targets):
 				if np.abs(et) > 0:
 					rt = target['length']
-					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*ka,rt,et,eta,alpha*dt,0.5*vmin,0,0,target['phase'],1))
+					f.write('{:d} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:.15g} {:d} {:d} {:d} {:d}\n'.format(e+1,0.5*ka,rt,et,eta,alpha*dt,0.5*vmin,0,0,phase,1))
 					e += 1
 			f.write('\n')
 

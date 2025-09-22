@@ -225,7 +225,7 @@ def read_dim(filename):
 	return int(line.strip().split()[1])
 
 
-def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, dt=0.005, hours=24,seed=12,beta1=0.9, beta2=0.999,WCA=False,DOC=True,Twin=False):
+def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, train=0, method=None, eta=1., alpha=1e-3, vmin=1e-3, temp=0, dt=0.005, hours=24,seed=12,beta1=0.9, beta2=0.999,WCA=False,DOC=True,Twin=False,phase=1):
 	'''Set up a complete LAMMPS simulation in a directory.
 	   
 	Parameters
@@ -275,7 +275,7 @@ def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, 
 	if train:
 		allo.write_lammps_data_learning(odir+datafile, 'Allosteric network', applied_args,
 										train=train, method=method, eta=eta, alpha=alpha, vmin=vmin,
-										beta1=beta1, beta2=beta2, dt=dt,WCA=WCA)
+										beta1=beta1, beta2=beta2, dt=dt,WCA=WCA,phase=phase)
 	else:
 		allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args)
 
