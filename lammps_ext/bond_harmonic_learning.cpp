@@ -26,6 +26,10 @@
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
+inline double sign(double x) {
+    return (x > 0) - (x < 0);
+}
+/* ---------------------------------------------------------------------- */
 
 BondHarmonicLearning::BondHarmonicLearning(LAMMPS *_lmp) : Bond(_lmp)
 {
@@ -69,7 +73,8 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
          rsq_f, r_f, dr_f, rk_f,
          dk, dl;
   double e_f, e_c, lfac = 1;
-
+  double alpha_t;
+  
   ebond_c = 0.0;
   ebond_f = 0.0;
   ev_init(eflag, vflag);
@@ -175,10 +180,10 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
 
     //set learning rate
     if (phase[type] == 2) { //lr decay according to loss, same as the original overclamping setting
-      double alpha_t = alpha[type] * abs((e_t[type] - e_f)/e_t[type]);
+      alpha_t = alpha[type] * abs((e_t[type] - e_f)/e_t[type]);
     }
     else {// constant learning rate
-      double alpha_t = alpha[type];
+      alpha_t = alpha[type];
     }
     
     // Update stiffness for next integration step
