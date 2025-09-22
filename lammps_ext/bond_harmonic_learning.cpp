@@ -100,11 +100,16 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
     rsq_f = delx_f * delx_f + dely_f * dely_f + delz_f * delz_f;
     r_f = sqrt(rsq_f);
 
+    // clampled setting
     if (target[type]) {
-
-      // compute applied strain
       e_f = (r_f - r0[type]) / r0[type];
-      e_c = e_f + eta[type] * (e_t[type] - e_f);
+      
+      if (eta[type]<0) {// overclamped
+        e_c = e_f - eta[type] * sign(e_t[type] - e_f);
+      }
+      else{
+        e_c = e_f + eta[type] * (e_t[type] - e_f);
+      }
 
       // compute length scale factor
       lfac = 1 + phase[type] * e_c;
@@ -168,16 +173,24 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
       ev_tally(i1_f, i2_f, nlocal, newton_bond, ebond_f, fbond_f, delx_f, dely_f, delz_f);
     }
 
+    //set learning rate
+    if (phase[type] == 2) { //lr decay according to loss, same as the original overclamping setting
+      double alpha_t = alpha[type] * abs((e_t[type] - e_f)/e_t[type]);
+    }
+    else {// constant learning rate
+      double alpha_t = alpha[type];
+    }
+    
     // Update stiffness for next integration step
-    // Update learning rules with Adam
     if (train[type] == 2) {
 
       if (mode[type] == 1) { // directed aging
-        dk = -2.0 * alpha[type]/eta[type] * rk_c * dr_c;
+        dk = -2.0 * alpha_t/eta[type] * rk_c * dr_c;
         k[type] += dk;
+        t[type] += 1;
       }
 
-      if (mode[type] == 3) { // coupled learning with momentum
+      if (mode[type] == 3) { // adaptive learning adam
         double G = (dr_f * dr_f - dr_c * dr_c);
         m[type] = beta1[type] * m[type] + (1 - beta1[type]) * G;
         v[type] = beta2[type] * v[type] + (1 - beta2[type]) * G * G;
@@ -191,38 +204,30 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
       if (mode[type] == 4) { // SGD with momentum
         double G = (dr_f * dr_f - dr_c * dr_c);
         m[type] = beta1[type] * m[type] + (1 - beta1[type]) * G;
-        dk = alpha[type]/eta[type] * m[type];
+        dk = alpha_t/eta[type] * m[type];
         k[type] += dk;
+        t[type] += 1;
       }
       
       if (mode[type] == 2) { // coupled learning SGD
-        dk = alpha[type]/eta[type] * (dr_f * dr_f - dr_c * dr_c);
+        dk = alpha_t/eta[type] * (dr_f * dr_f - dr_c * dr_c);
         k[type] += dk;
+        t[type] += 1;
       }
 
       if (k[type] < vmin[type]) k[type] = vmin[type];
 
     }
-    if (train[type] == 1) { // update rest length //need to update 
-      double lsmooth = vmin[type]*2;
-      double s=(r0[type]-vmin[type])/(lsmooth-vmin[type]); //I need add lmin and lsmooth similar as vmin
-			if (s < 0){s = 0;}
-			if (s > 1){s = 1;}
-			double sf = s*s*s*(s*(s*6-15)+10);
+    else{
+      error->all(FLERR,"relaxed length update not implemented yet");
+    }
 
-      if (mode[type] == 1) { // directed aging
-        dl = -alpha[type]/eta[type]* k[type]*(r0[type]-r_c)*sf;
-        r0[type] += dl;
-      }
-
-      else { // coupled learning
-        dl = -alpha[type]/eta[type] * k[type]*(r_f-lfac*r_c+(lfac*lfac-1)*r0[type])*sf;
-        r0[type] += dl;
-      }
+    
 
     }
-  }
+
 }
+
 
 /* ---------------------------------------------------------------------- */
 
