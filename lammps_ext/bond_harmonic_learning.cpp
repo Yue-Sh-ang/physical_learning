@@ -74,7 +74,7 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
          dk, dl;
   double e_f, e_c, lfac = 1;
   double alpha_t;
-  
+
   ebond_c = 0.0;
   ebond_f = 0.0;
   ev_init(eflag, vflag);
@@ -223,7 +223,7 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
       if (k[type] < vmin[type]) k[type] = vmin[type];
 
     }
-    else{
+    else if (train[type] == 1) { // update relaxed length r0
       error->all(FLERR,"relaxed length update not implemented yet");
     }
 
