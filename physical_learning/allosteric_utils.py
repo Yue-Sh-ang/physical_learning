@@ -2521,11 +2521,13 @@ class Allosteric(Elastic):
 				if Twin==True: #if you want they have the same noise spectrum
 					f.write('group clamped molecule 1\n')
 					f.write('group free molecule 2\n')
-					f.write('fix				therm free langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
-					f.write('fix				therm clamped langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+					f.write('fix				therm1 free langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+					f.write('fix				therm2 clamped langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+					f.write('fix				intgr1 free nve\n')
+					f.write('fix				intgr2 clamped nve\n')
 				else:
 					f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
-				f.write('fix				intgr all nve\n')
+					f.write('fix				intgr all nve\n')
 
 			if temp == 0:
 				f.write('fix				intgr all nve\n')
