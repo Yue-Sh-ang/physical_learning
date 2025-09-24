@@ -163,7 +163,7 @@ def read_data(filename, graph):
 			edge[2]['stiffness'] = k
 			edge[2]['length'] = l
 
-def read_data_new(filename, allo,train):
+def read_data_new(filename, allo,train,Adam=False):
 	'''Read a LAMMPS data file and update a graph based on its contents.
 
 	The bond stiffnesses and rest lengths are set based on the datafile specifications.
@@ -185,25 +185,33 @@ def read_data_new(filename, allo,train):
 		for i, edge in enumerate(allo.graph.edges(data=True)):
 			line = f.readline()
 			idx, hk, l = np.array(line.strip().split())[:3].astype(float)
+			if Adam:
+				m,v= np.array(line.strip().split())[11:13].astype(float)
+
+
 			k = 2*hk
 			edge[2]['stiffness'] = k
 			edge[2]['length'] = l
+			if Adam:
+				edge[2]['m']=m
+				edge[2]['v']=v
 		while len(line.strip().split()) < 1 or line.strip().split()[0] != 'Atoms':
 			line = f.readline()
 		f.readline() # empty space
 
 		for i in range(allo.n): 
-			line = f.readline()
-			id,_,_, x, y, z,_,_,_ = np.array(line.strip().split())[:9].astype(float)
-			allo.pts[i,0] = x
-			allo.pts[i,1] = y
-			allo.pts[i,2] = z
 			if train:
 				line = f.readline()
 				id,_,_, xc, yc, zc,_,_,_ = np.array(line.strip().split())[:9].astype(float)
 				allo.pts_c[i,0] = xc
 				allo.pts_c[i,1] = yc
 				allo.pts_c[i,2] = zc
+			line = f.readline()
+			id,_,_, x, y, z,_,_,_ = np.array(line.strip().split())[:9].astype(float)
+			allo.pts[i,0] = x
+			allo.pts[i,1] = y
+			allo.pts[i,2] = z
+			
 
 def read_dim(filename):
 	'''Read a LAMMPS input file to parse out the dimension.
@@ -294,7 +302,7 @@ def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, 
 
 
 
-def load_frame(odir, frame=200,train=True):
+def load_frame(odir, frame=200,train=True,Adam=False):
 	if odir[-1] != '/' : odir += '/'
 	netfile = glob.glob(odir+'*.txt')[0]
 	datafile = glob.glob(odir+f'step{frame:d}.bond')[0]
@@ -305,21 +313,29 @@ def load_frame(odir, frame=200,train=True):
 	dim = read_dim(infile)
 	if dim != allo.dim:
 		raise ValueError("Dimension mismatch between LAMMPS simulation (d={:d}) and network file (d={:d}).".format(dim,allo.dim))
-	read_data_new(datafile, allo,train)
+	read_data_new(datafile, allo,train,Adam=Adam)
 	return allo
 
 
-def get_traj(odir,nframes=200,train=True):
+def get_traj(odir,nframes=200,train=True,Adam=False):
 	for i in range(1,nframes+1):
-		allo = load_frame(odir, frame=i,train=train)
+		allo = load_frame(odir, frame=i,train=train,Adam=Adam)
 		stiffness = np.array([edge[2]['stiffness'] for edge in allo.graph.edges(data=True)])
-		
+		if Adam:
+			m = np.array([edge[2]['m'] for edge in allo.graph.edges(data=True)])
+			v = np.array([edge[2]['v'] for edge in allo.graph.edges(data=True)])
 		
 		if i == 1:
 			r_traj = np.copy(allo.pts)
 			if train:
 				rc_traj = np.copy(allo.pts_c)
 				k_traj = np.copy(stiffness)
+				if Adam:
+					m_traj = np.copy(m)
+					v_traj = np.copy(v)
+				else:
+					m_traj = None
+					v_traj = None
 			else:
 				rc_traj = None
 				k_traj = None
@@ -328,8 +344,16 @@ def get_traj(odir,nframes=200,train=True):
 			if train:
 				rc_traj = np.concatenate((rc_traj, allo.pts_c), axis=0)
 				k_traj = np.concatenate((k_traj, stiffness), axis=0)
-
-	return r_traj, rc_traj, k_traj
+				if Adam:
+					m_traj = np.concatenate((m_traj, m), axis=0)
+					v_traj = np.concatenate((v_traj, v), axis=0)
+				
+	if not train:
+		return r_traj
+	elif not Adam:
+		return r_traj, rc_traj, k_traj
+	else:
+		return r_traj, rc_traj, k_traj, m_traj, v_traj
 
 def get_clusters(data, n, seed=12):
 	'''Get k-means clusters.

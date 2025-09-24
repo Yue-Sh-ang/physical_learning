@@ -117,7 +117,7 @@ void BondHarmonicLearning::compute(int eflag, int vflag)
       }
 
       // compute length scale factor
-      lfac = 1 + phase[type] * e_c;
+      lfac = 1 +  e_c;
     }
 
     else {
