@@ -9,92 +9,6 @@ from sklearn.metrics import silhouette_score
 
 from allosteric_utils import Allosteric
 
-def read_dump(filename):
-	'''Read a LAMMPS dumpfile.
-	   
-	Parameters
-	----------
-	filename : str
-		The name of the file to read.
-
-	Returns
-	-------
-	ndarray
-		The (x,y) coordinates for each of n points over all output frames.
-	'''
-
-	with open(filename, 'r') as f:
-		lines = f.readlines()
-		if len(lines[0].split()) > 1:
-			n = int(lines[3].split()[0])
-			h = 9
-			m = n+9
-		else:
-			n = int(lines[0].split()[0])
-			h = 2
-		m = n+h
-		frames = len(lines)//m
-
-	traj = np.zeros((frames,n,3))
-	vtraj = np.zeros((frames,n,3))
-	vx, vy, vz = 0, 0, 0
-	for fr in range(frames):
-		for i in range(n):
-			line = lines[m*fr+h+i]
-			line = np.array(line.strip().split()).astype(float)
-			if len(line) > 4:
-				x, y, z, vx, vy, vz = line[-6], line[-5], line[-4], line[-3], line[-2], line[-1]
-			else:
-				x, y, z = line[-3], line[-2], line[-1]
-			traj[fr,i,0] = x
-			traj[fr,i,1] = y
-			traj[fr,i,2] = z
-			vtraj[fr,i,0] = vx
-			vtraj[fr,i,1] = vy
-			vtraj[fr,i,2] = vz
-
-	return traj, vtraj
-
-
-def read_dump_bondinfo(filename):
-	'''Read a LAMMPS dumpfile.
-	   
-	Parameters
-	----------
-	filename : str
-		The name of the file to read.
-
-	Returns
-	-------
-	ndarray
-		The (x,y) coordinates for each of n points over all output frames.
-	'''
-
-	with open(filename, 'r') as f:
-		lines = f.readlines()
-		if len(lines[0].split()) > 1:
-			n = int(lines[3].split()[0])
-			h = 9
-			m = n+9
-		else:
-			n = int(lines[0].split()[0])
-			h = 2
-		m = n+h
-		frames = len(lines)//m
-
-	dist = np.zeros((frames,n,1))
-	engpot = np.zeros((frames,n,1))
-	
-	for fr in range(frames):
-		for i in range(n):
-			line = lines[m*fr+h+i]
-			line = np.array(line.strip().split()).astype(float)
-			id, c1, c2 = line[-3], line[-2], line[-1]
-			dist[fr,i,0] = c1
-			engpot[fr,i,0] = c2
-			
-	return dist, engpot
-
 
 def read_log(filename):
     """
@@ -300,6 +214,29 @@ def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, 
 		f.write(f"sbatch ./{jobfile}\n")
 	print("LAMMPS simulation with Bond Info set up in directory: {:s}".format(odir))
 
+
+def setup_test(allo, odir, prefix, lmp_path, duration, frames, applied_args, temp=0, dt=0.005, hours=24,seed=12,WCA=False,DOC=True,Twin=False):
+	datafile = prefix+'.data'
+	infile = prefix+'.in'
+	logfile = prefix+'.log'
+	jobfile = 'job.sh'
+
+	if odir[-1] != '/' : odir += '/'
+	if not os.path.exists(odir):
+		os.makedirs(odir)
+	
+	allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args) 
+	allo.write_lammps_input_test(odir+infile, datafile, duration, frames, temp=temp, dt=dt, seed=seed, WCA=WCA, DOC=DOC, Twin=Twin)
+	allo.save(odir+'allo.txt') # do this last, because it resets init!!
+
+	cmd = lmp_path+' -i '+infile+' -log '+logfile
+
+	allo.write_job(odir+jobfile, prefix+'_test', hours, cmd)
+	# submit job together
+	with open('tasks.sh', 'a') as f:
+		f.write(f"cd {odir}\n")
+		f.write(f"sbatch ./{jobfile}\n")
+	print("LAMMPS simulation with Bond Info set up in directory: {:s}".format(odir))
 
 
 def load_frame(odir, frame=200,train=True,Adam=False):

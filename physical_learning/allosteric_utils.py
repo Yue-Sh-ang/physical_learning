@@ -2559,62 +2559,90 @@ class Allosteric(Elastic):
 			f.write('next i\n')
 			f.write('jump SELF loop_start\n')
 
-
-	def write_quench_input(self, filename, datafile,dumpfile,temp,etol=0,ftol=1e-10,maxiter=50000,dt=0.005):
-		'''Write the input file for a LAMMPS energy minimization (quench) run.
-
-	Parameters
-	----------
-	filename : str
-    	Name of the LAMMPS input script.
-	datafile : str
-    	Input data file to read (initial configuration).
-	dumpfile : str
-    	Currently unused) Placeholder for consistency.
-	temp : float
-    	Temperature for randomizing initial velocities before quench.
-	etol : float
-    	Energy tolerance for minimization.
-	ftol : float
-    	Force tolerance for minimization.
-	maxiter : int
-    	Maximum number of iterations.
-	dt : float
-    	Timestep (not used in minimization, but LAMMPS requires it to be set).
-	'''
-
+	def write_lammps_input_test(self, filename, datafile, duration,lines=10000, temp=0, dt=0.005, seed=12, WCA=False, DOC=True, Twin=False):
+		#one target
+		id1,id2=self.targets[0]['i']+1,self.targets[0]['j']+1
+		runsteps=int(duration/dt)
+		interval=runsteps//lines
 		with open(filename, 'w') as f:
 			f.write('units				lj\n')
 			f.write('timestep			{:.15g}\n'.format(dt))
 			f.write('dimension			{:d}\n'.format(self.dim))
 			f.write('atom_style			bond\n')
 
-			
-			if self.dim == 2:
-				f.write('boundary			s s p\n')
+			if temp == 0:
+				if self.dim == 2:
+					f.write('boundary			f f p\n')
+				else:
+					f.write('boundary			f f f\n')
 			else:
-				f.write('boundary			s s s\n')
-
+				if self.dim == 2:
+					f.write('boundary			s s p\n')
+				else:
+					f.write('boundary			s s s\n')
 			f.write('bond_style 		harmonic\n\n')
-
 			f.write('read_data			{:s}\n\n'.format(datafile))
+			if WCA:
+				rmin=np.min([edge[2]['length'] for edge in self.graph.edges(data=True)])
+				f.write('variable r0     equal {:.15g}\n'.format(rmin))
+				f.write('variable frac   equal 0.5                          # forbid < 0.5 r0\n')
+				f.write('variable sigma  equal ${frac}*${r0}/1.122462048309373\n')
+				f.write('variable rc     equal ${sigma}*1.122462048309373    # rc = 2^(1/6)*sigma\n')
+				f.write('variable eps    equal 1.0\n')
+
+				f.write('pair_style      lj/cut ${rc}        # global cutoff ≥ max per-type cutoff\n')
+				f.write('pair_modify     shift yes            # set energy to 0 at rc (WCA form)  # :contentReference[oaicite:1]{index=1}\n')
+				f.write('pair_coeff      * * ${eps} ${sigma} ${rc}\n')
+			if temp > 0:
+				f.write('velocity			all create {:.15g} {:d} dist gaussian mom yes rot yes sum no\n\n'.format(temp, seed))
 			
+			
+			
+			
+			
+			if temp > 0:
+				if Twin==True: #if you want they have the same noise spectrum
+					f.write('group clamped molecule 1\n')
+					f.write('group free molecule 2\n')
+					f.write('fix				therm1 free langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+					f.write('fix				therm2 clamped langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+					f.write('fix				intgr1 free nve\n')
+					f.write('fix				intgr2 clamped nve\n')
+				else:
+					f.write('fix				therm all langevin {:.15g} {:.15g} $(100.0*dt) {:d} zero yes\n'.format(temp, temp, seed))
+					f.write('fix				intgr all nve\n')
+
+			if temp == 0:
+				f.write('fix				intgr all nve\n')
+				f.write('fix				drag all viscous 2\n')
 			if self.dim == 2:
 				f.write('fix				dim all enforce2d\n')
 
+		
+			if WCA:
+				f.write('thermo_style    	custom step time temp press vol pe ke epair ebond\n')
+			else:
+				f.write('thermo_style    	custom step time temp press vol pe ke\n')
+			f.write('thermo          	${step}\n')
+			if not WCA:
+				f.write('neigh_modify		once yes\n')
+			else:
+				f.write('neigh_modify exclude molecule/inter all\n')
+				f.write('comm_modify cutoff 0.05\n')
+				f.write('neigh_modify binsize 0.02\n')
+				f.write('atom_modify sort 0 0.0\n')
+			# print the target strain
+			f.write('compute prop all property/atom xu yu zu\n')
+			f.write(f'variable dx equal c_prop[1][{id1:d}] - c_prop[1][{id2:d}]\n')
+			f.write(f'variable dy equal c_prop[2][{id1:d}] - c_prop[2][{id2:d}]\n')
 			
-			
-			f.write('velocity			all create {:.15g} 12 dist gaussian mom yes rot yes sum no\n\n'.format(temp))
+			#JUST for 2d
+			f.write(f'variable dist equal sqrt(v_dx*v_dx + v_dy*v_dy)\n')
+			f.write(f'fix logtarget all print {interval:d} "${{step}} ${{v_dist}}" file dist_log.txt screen no\n')
 
-			f.write('min_style fire\n')
-			f.write(f'minimize {etol:.1e} {ftol:.1e} {maxiter} {maxiter}\n\n')
-			f.write('dump            out all custom 1 {:s} x y z vx vy vz\n'.format(dumpfile))
-			f.write('dump_modify     out format line "%.15g %.15g %.15g %.15g %.15g %.15g"\n\n')
-			f.write('run             0\n\n')
-			f.write('undump          out\n')
-			f.write('write_data 		{:s}\n'.format(datafile)) # overwrite existing
+			f.write(f'run ${runsteps:d}\n')
 
-
+	# need to code up
 			
 			
 				
