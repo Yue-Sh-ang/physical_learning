@@ -2599,7 +2599,6 @@ class Allosteric(Elastic):
 			
 			
 			
-			
 			if temp > 0:
 				if Twin==True: #if you want they have the same noise spectrum
 					f.write('group clamped molecule 1\n')
@@ -2623,7 +2622,7 @@ class Allosteric(Elastic):
 				f.write('thermo_style    	custom step time temp press vol pe ke epair ebond\n')
 			else:
 				f.write('thermo_style    	custom step time temp press vol pe ke\n')
-			f.write('thermo          	${step}\n')
+			f.write(f'thermo          	{interval:d}\n')
 			if not WCA:
 				f.write('neigh_modify		once yes\n')
 			else:
@@ -2632,13 +2631,10 @@ class Allosteric(Elastic):
 				f.write('neigh_modify binsize 0.02\n')
 				f.write('atom_modify sort 0 0.0\n')
 			# print the target strain
-			f.write('compute prop all property/atom xu yu zu\n')
-			f.write(f'variable dx equal c_prop[1][{id1:d}] - c_prop[1][{id2:d}]\n')
-			f.write(f'variable dy equal c_prop[2][{id1:d}] - c_prop[2][{id2:d}]\n')
-			
-			#JUST for 2d
-			f.write(f'variable dist equal sqrt(v_dx*v_dx + v_dy*v_dy)\n')
-			f.write(f'fix logtarget all print {interval:d} "${{step}} ${{v_dist}}" file dist_log.txt screen no\n')
+			f.write(f'variable dx equal x[{id1:d}] - x[{id2:d}]\n')
+			f.write(f'variable dy equal y[{id1:d}] - y[{id2:d}]\n')
+			f.write(f'variable r equal sqrt(v_dx*v_dx + v_dy*v_dy)\n')
+			f.write(f'fix logtarget all print {interval:d} "$r" file dist_log.txt screen no\n')
 
 			f.write(f'run ${runsteps:d}\n')
 
