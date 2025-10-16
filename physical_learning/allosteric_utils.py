@@ -2559,7 +2559,7 @@ class Allosteric(Elastic):
 			f.write('next i\n')
 			f.write('jump SELF loop_start\n')
 
-	def write_lammps_input_test(self, filename, datafile, duration,lines=10000, temp=0, dt=0.005, seed=12, WCA=False, DOC=True, Twin=False):
+	def write_lammps_input_test(self, filename, datafile, duration,lines, temp=0, dt=0.005, seed=12, WCA=False, DOC=True, Twin=False):
 		#one target
 		id1,id2=self.targets[0]['i']+1,self.targets[0]['j']+1
 		runsteps=int(duration/dt)
