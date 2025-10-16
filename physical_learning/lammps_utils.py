@@ -215,7 +215,7 @@ def setup_run_new(allo, odir, prefix, lmp_path, duration, frames, applied_args, 
 	print("LAMMPS simulation with Bond Info set up in directory: {:s}".format(odir))
 
 
-def setup_test(allo, odir, prefix, lmp_path, duration,applied_args,lines=10000, temp=0, dt=0.005, hours=24,seed=12,WCA=False,DOC=True,Twin=False):
+def setup_test(allo, odir, prefix, lmp_path, duration,applied_args,lines=10000, temp=0, dt=0.005, hours=24,seed=12,WCA=True,Twin=True):
 	datafile = prefix+'.data'
 	infile = prefix+'.in'
 	logfile = prefix+'.log'
@@ -226,7 +226,7 @@ def setup_test(allo, odir, prefix, lmp_path, duration,applied_args,lines=10000, 
 		os.makedirs(odir)
 	
 	allo.write_lammps_data(odir+datafile, 'Allosteric network', applied_args) 
-	allo.write_lammps_input_test(odir+infile, datafile, duration, lines=lines,temp=temp, dt=dt, seed=seed, WCA=WCA, DOC=DOC, Twin=Twin)
+	allo.write_lammps_input_test(odir+infile, datafile, duration, lines=lines,temp=temp, dt=dt, seed=seed, WCA=WCA, Twin=Twin)
 	allo.save(odir+'allo.txt') # do this last, because it resets init!!
 
 	cmd = lmp_path+' -i '+infile+' -log '+logfile
