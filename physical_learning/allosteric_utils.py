@@ -2636,7 +2636,7 @@ class Allosteric(Elastic):
 			f.write(f'variable r equal sqrt(v_dx*v_dx + v_dy*v_dy)\n')
 			f.write(f'fix logtarget all print {interval:d} "$r" file dist_log.txt screen no\n')
 
-			f.write(f'run ${runsteps:d}\n')
+			f.write(f'run {runsteps:d}\n')
 
 	# need to code up
 			
