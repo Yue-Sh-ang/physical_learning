@@ -348,7 +348,7 @@ def setup_quench(allo,odir,lmp_path,applied_args,temp,etol=0,ftol=1e-10,maxiter=
 	
 	print("LAMMPS quench simulation set up in directory: {:s}".format(odir))
 
-def submit_job_array(odir_list, jobfile, array_name="job_array", max_concurrent=50, logfile="tasks.sh"):
+def submit_job_array(odir_list, lmp_path,prefix, array_name="job_array", max_concurrent=50, logfile="tasks.sh"):
 	"""
 	Generate and submit a Slurm job array script.
 
@@ -378,7 +378,9 @@ def submit_job_array(odir_list, jobfile, array_name="job_array", max_concurrent=
 
 	n_jobs = len(odir_list)
 	array_script = f"{array_name}.slurm"
-
+	infile = prefix+'.in'
+	logfile = prefix+'.log'
+	cmd = lmp_path+' -i '+infile+' -log '+logfile
 	# Write the array job script
 	with open(array_script, "w") as f:
 		f.write("#!/bin/bash\n")
@@ -388,7 +390,7 @@ def submit_job_array(odir_list, jobfile, array_name="job_array", max_concurrent=
 
 		f.write("ODIRS=(" + " ".join(odir_list) + ")\n")
 		f.write("cd ${ODIRS[$SLURM_ARRAY_TASK_ID]}\n")
-		f.write(f"sbatch {jobfile}\n")
+		f.write(f"{cmd}\n")
 
 	# Log submission commands
 	with open(logfile, "a") as f:
