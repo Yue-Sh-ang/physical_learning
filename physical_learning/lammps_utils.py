@@ -3,7 +3,7 @@ import os
 import glob
 from plot_imports import *
 import matplotlib.pyplot as plt
-
+import subprocess
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 
@@ -232,11 +232,7 @@ def setup_test(allo, odir, prefix, lmp_path, duration,applied_args,lines=10000, 
 	cmd = lmp_path+' -i '+infile+' -log '+logfile
 
 	allo.write_job(odir+jobfile, prefix+'_test', hours, cmd)
-	# submit job together
-	with open('tasks.sh', 'a') as f:
-		f.write(f"cd {odir}\n")
-		f.write(f"sbatch ./{jobfile}\n")
-	print("LAMMPS simulation with Bond Info set up in directory: {:s}".format(odir))
+	print("LAMMPS simulation set up in directory: {:s}".format(odir))
 
 
 def load_frame(odir, frame=200,train=True,Adam=False):
@@ -352,4 +348,53 @@ def setup_quench(allo,odir,lmp_path,applied_args,temp,etol=0,ftol=1e-10,maxiter=
 	
 	print("LAMMPS quench simulation set up in directory: {:s}".format(odir))
 
+def submit_job_array(odir_list, jobfile, array_name="job_array", max_concurrent=50, logfile="tasks.sh"):
+	"""
+	Generate and submit a Slurm job array script.
+
+	Parameters
+	----------
+	odir_list : list[str]
+		List of directories where the jobs should be run.
+	jobfile : str
+		Name of the job script (e.g., 'run.slurm' or 'job.sh') located in each directory.
+	array_name : str, optional
+		Name prefix for the job array (default: 'job_array').
+	max_concurrent : int, optional
+		Maximum number of simultaneous jobs in the array (default: 10).
+	logfile : str, optional
+		File name for the generated submission script (default: 'tasks.sh').
+	"""
+
+	missing = [d for d in odir_list if not os.path.isdir(d)]
+	if missing:
+		print("The following directories do NOT exist:")
+		for d in missing:
+			print(f"   - {d}")
+		print("Aborting submission.")
+		return
+	else:
+		print(f"All {len(odir_list)} directories exist.")
+
+	n_jobs = len(odir_list)
+	array_script = f"{array_name}.slurm"
+
+	# Write the array job script
+	with open(array_script, "w") as f:
+		f.write("#!/bin/bash\n")
+		f.write(f"#SBATCH --job-name={array_name}\n")
+		f.write(f"#SBATCH --array=0-{n_jobs-1}%{max_concurrent}\n")
+		f.write("#SBATCH --output=slurm-%A_%a.out\n\n")
+
+		f.write("ODIRS=(" + " ".join(odir_list) + ")\n")
+		f.write("cd ${ODIRS[$SLURM_ARRAY_TASK_ID]}\n")
+		f.write(f"sbatch {jobfile}\n")
+
+	# Log submission commands
+	with open(logfile, "a") as f:
+		f.write(f"sbatch {array_script}\n")
+
+	# Submit the array
+	subprocess.run(["sbatch", array_script])
+	print(f"Submitted job array with {n_jobs} jobs, {max_concurrent} running concurrently.")
 
