@@ -384,6 +384,7 @@ def submit_job_array(odir_list, lmp_path,prefix, array_name="job_array", max_con
 	# Write the array job script
 	with open(array_script, "w") as f:
 		f.write("#!/bin/bash\n")
+		f.write("#SBATCH --partition=liu_compute \n")
 		f.write(f"#SBATCH --job-name={array_name}\n")
 		f.write(f"#SBATCH --array=0-{n_jobs-1}%{max_concurrent}\n")
 		f.write("#SBATCH --output=slurm-%A_%a.out\n\n")
