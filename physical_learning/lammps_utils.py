@@ -398,6 +398,6 @@ def submit_job_array(odir_list, lmp_path,prefix, array_name="job_array", max_con
 		f.write(f"sbatch {array_script}\n")
 
 	# Submit the array
-	subprocess.run(["sbatch", array_script])
-	print(f"Submitted job array with {n_jobs} jobs, {max_concurrent} running concurrently.")
+
+	print(f"created job array with {n_jobs} jobs, max running {max_concurrent}. To submit, run: {logfile}")
 
