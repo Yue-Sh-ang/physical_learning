@@ -2626,7 +2626,12 @@ class Allosteric(Elastic):
 			# print the target strain
 			f.write(f'variable dx equal x[{id1:d}] - x[{id2:d}]\n')
 			f.write(f'variable dy equal y[{id1:d}] - y[{id2:d}]\n')
-			f.write(f'variable r equal sqrt(v_dx*v_dx + v_dy*v_dy)\n')
+			if self.dim ==3:
+				f.write(f'variable dz equal z[{id1:d}] - z[{id2:d}]\n')
+				f.write(f'variable r equal sqrt(v_dx*v_dx + v_dy*v_dy + v_dz*v_dz)\n')
+			else:
+				f.write(f'variable r equal sqrt(v_dx*v_dx + v_dy*v_dy)\n')
+				
 			f.write(f'fix logtarget all print {interval:d} "$r" file dist_log.txt screen no\n')
 
 			f.write(f'run {runsteps:d}\n')
