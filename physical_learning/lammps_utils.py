@@ -387,7 +387,7 @@ def submit_job_array(odir_list, lmp_path,prefix, array_name="job_array", max_con
 		f.write("#SBATCH --partition=liu_compute \n")
 		f.write(f"#SBATCH --job-name={array_name}\n")
 		f.write(f"#SBATCH --array=0-{n_jobs-1}%{max_concurrent}\n")
-		f.write("#SBATCH --output=slurm-%A_%a.out\n\n")
+		f.write("#SBATCH --output=~/messages/slurm-%A_%a.out\n\n")
 
 		f.write("ODIRS=(" + " ".join(odir_list) + ")\n")
 		f.write("cd ${ODIRS[$SLURM_ARRAY_TASK_ID]}\n")
@@ -397,7 +397,6 @@ def submit_job_array(odir_list, lmp_path,prefix, array_name="job_array", max_con
 	with open(logfile, "a") as f:
 		f.write(f"sbatch {array_script}\n")
 
-	# Submit the array
 
-	print(f"created job array with {n_jobs} jobs, max running {max_concurrent}. To submit, run: {logfile}")
+	print(f"created job array with {n_jobs} jobs, max running {max_concurrent}. To submit, run: sbatch {array_script} ")
 
